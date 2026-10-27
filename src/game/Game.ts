@@ -8,7 +8,7 @@ import { FRUIT_HUES, Fruit } from './Fruit';
 import { launchSpeed, step } from './Physics';
 import { Spawner, type Difficulty } from './Spawner';
 
-export type GameState = 'ready' | 'playing' | 'paused' | 'over';
+export type GameState = 'menu' | 'playing' | 'paused' | 'over';
 
 export interface GameConfig {
   pool: PoolEntry[];
@@ -36,7 +36,7 @@ const FRUIT_SPEED = 0.5;
 const MAX_STEP = 1 / 60;
 
 export class Game {
-  state: GameState = 'ready';
+  state: GameState = 'menu';
   fruits: Fruit[] = [];
   readonly effects = new Effects();
   score = 0;
@@ -88,6 +88,14 @@ export class Game {
     this.consumed = 0;
     this.spawner = new Spawner(this.config.difficulty);
     this.state = 'playing';
+  }
+
+  /** 回到菜单：清空场上的水果和效果 */
+  toMenu(): void {
+    this.fruits = [];
+    this.effects.clear();
+    this.heard = { text: '', hits: [], isFinal: true };
+    this.state = 'menu';
   }
 
   togglePause(): void {

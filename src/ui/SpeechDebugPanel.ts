@@ -1,5 +1,5 @@
 import type { VadEvent, VoiceActivity } from '../speech/VoiceActivity';
-import type { SpeechTuning } from '../storage';
+import type { Settings } from '../settings';
 import { S } from './strings';
 
 interface Utterance {
@@ -43,7 +43,7 @@ export class SpeechDebugPanel {
 
   constructor(
     private readonly vad: VoiceActivity,
-    private readonly tuning: () => SpeechTuning,
+    private readonly settings: Settings,
   ) {
     this.el = document.createElement('pre');
     this.el.id = 'speech-debug';
@@ -110,8 +110,8 @@ export class SpeechDebugPanel {
   /** 每帧调用；面板隐藏时不做事 */
   render(): void {
     if (this.el.hidden) return;
-    const t = this.tuning();
-    const lines = [S.debug.title, S.debug.mode(t.mode === 'single'), S.debug.fast(t.fastEndpoint), ''];
+    const t = this.settings;
+    const lines = [S.debug.title, S.debug.mode(t.speechMode === 'single'), S.debug.fast(t.fastEndpoint), ''];
     if (this.vad.active) {
       const db = Math.max(-90, this.vad.levelDb);
       const bars = Math.round(((db + 90) / 90) * 20);

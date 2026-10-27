@@ -105,6 +105,7 @@ export class HUD {
     const w = game.width;
     const h = game.height;
     this.time = performance.now() / 1000;
+    if (game.state === 'menu') return; // 菜单是 HTML 界面
     ctx.save();
     ctx.textBaseline = 'top';
     ctx.lineJoin = 'round';
@@ -118,9 +119,7 @@ export class HUD {
     this.drawMic(mic, w);
     this.drawHeard(game, w, h);
 
-    const canSpeak = mic !== 'unsupported' && mic !== 'denied' && mic !== 'no-device';
-    if (game.state === 'ready') this.overlay(w, h, S.title, [canSpeak ? S.readHint : S.keyboardHint, S.startHint]);
-    else if (game.state === 'paused') this.overlay(w, h, S.pausedTitle, [S.pausedHint]);
+    if (game.state === 'paused') this.overlay(w, h, S.pausedTitle, [S.pausedHint]);
     else if (game.state === 'over') this.drawResult(game, best, w, h);
     ctx.restore();
   }
