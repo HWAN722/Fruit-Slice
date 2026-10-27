@@ -42,6 +42,11 @@ export class Spawner {
     return lerp(...this.curve.speed, this.level);
   }
 
+  /** 掉命后难度往回退一点：对小朋友友好，不会越错越难 */
+  setback(seconds: number): void {
+    this.elapsed = Math.max(0, this.elapsed - seconds);
+  }
+
   /** 返回本帧要抛出的水果数 */
   update(dt: number, onScreen: number): number {
     this.elapsed += dt;

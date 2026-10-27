@@ -139,8 +139,8 @@ export class MenuScene {
         ),
         h('p', { class: 'note' }, M.difficultyHints[s.difficulty]),
 
-        h('div', { class: 'actions' }, settingsBtn, startBtn),
         this.best > 0 ? h('p', { class: 'note center' }, M.best(this.best)) : null,
+        h('div', { class: 'actions' }, settingsBtn, startBtn),
       ),
     );
     this.card.scrollTop = scroll;

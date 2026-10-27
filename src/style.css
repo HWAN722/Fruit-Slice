@@ -3,6 +3,9 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  /* 手机上防止下拉刷新、橡皮筋回弹 */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
   background: #2b1d14;
   font-family: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
@@ -11,13 +14,14 @@ body {
   display: block;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* 手机地址栏收起/展开时跟着变 */
   touch-action: none;
 }
 
 #kbd-form {
   position: fixed;
   left: 50%;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   width: min(420px, calc(100vw - 32px));
 }
@@ -26,7 +30,7 @@ body {
   box-sizing: border-box;
   width: 100%;
   padding: 10px 14px;
-  font-size: 20px;
+  font-size: 20px; /* ≥16px，iOS 聚焦时不会自动放大页面 */
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.45);
@@ -61,7 +65,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   box-sizing: border-box;
   background: rgba(20, 10, 4, 0.55);
 }
@@ -287,4 +292,194 @@ label.disabled,
 
 #kbd-form[hidden] {
   display: none;
+}
+
+@media (pointer: coarse) {
+  #kbd-input {
+    font-size: 16px;
+    padding: 8px 12px;
+    opacity: 0.75;
+  }
+}
+
+/* ---------- 暂停 ---------- */
+
+#pause,
+#result {
+  z-index: 1;
+}
+
+.card.narrow {
+  width: min(380px, 100%);
+}
+
+.card .keys {
+  margin-top: 12px;
+}
+
+@media (pointer: coarse) {
+  .card .keys {
+    display: none; /* 触屏设备没有键盘，不显示快捷键提示 */
+  }
+}
+
+#pause-btn {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.35)
+    linear-gradient(90deg, transparent 15px, #fff 15px, #fff 20px, transparent 20px, transparent 24px, #fff 24px, #fff 29px, transparent 29px)
+    center / 44px 18px no-repeat;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#pause-btn[hidden] {
+  display: none;
+}
+
+#pause-btn:focus-visible {
+  outline: 3px solid #81c784;
+}
+
+/* ---------- 结算 ---------- */
+
+.card.result h1 {
+  margin-bottom: 0;
+}
+
+.card .badge {
+  margin: 6px auto 0;
+  width: fit-content;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #ef5350;
+  color: #fff;
+  font-weight: bold;
+  animation: badge-pop 0.5s ease-out;
+}
+
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.3);
+  }
+  70% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.card .big-score {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: clamp(48px, 14vw, 72px);
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  line-height: 1.1;
+}
+
+.card .stat-line {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 16px;
+}
+
+.card .tone-list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.missed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.missed-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  padding: 8px 4px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff4e0;
+  font: inherit;
+}
+
+.card button.missed-item {
+  padding: 8px 4px;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.missed-item.listen:hover,
+.missed-item.listen:focus-visible {
+  border-color: #ffd54a;
+  outline: none;
+}
+
+.missed-item.listen::after {
+  content: '🔊';
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.missed-text {
+  font-size: 32px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.missed-pinyin {
+  margin-top: 2px;
+  font-size: 14px;
+  color: #ffe0b2;
+}
+
+.missed-count {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  font-size: 12px;
+  color: #ff8a80;
+}
+
+/* 按钮文字不折行；矮屏（手机横屏）上按钮固定在卡片底部，不用滚动就能点到 */
+.card button {
+  white-space: nowrap;
+}
+
+.card .actions {
+  position: sticky;
+  bottom: -18px;
+  margin-top: 10px;
+  margin-bottom: -18px;
+  padding: 12px 0 18px;
+  background: linear-gradient(rgba(74, 47, 29, 0), #4a2f1d 30%);
+}
+
+@media (max-width: 420px) {
+  .card {
+    padding: 18px 16px 18px;
+  }
+
+  .card .actions button {
+    padding: 12px 14px;
+  }
 }

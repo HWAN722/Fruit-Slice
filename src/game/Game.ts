@@ -1,6 +1,6 @@
 import type { PoolEntry } from '../data/loadBank';
 import { matchTranscript, type MatchOptions, type MatchTarget } from '../match/matcher';
-import { formatSyllable } from '../match/normalize';
+import { formatSyllable, type Tone } from '../match/normalize';
 import { S } from '../ui/strings';
 import { Bomb } from './Bomb';
 import { Effects } from './Effects';
@@ -27,6 +27,33 @@ export type GameEvent =
   | { type: 'toneMiss' }
   | { type: 'gameOver' };
 
+/** 没切到的水果，结算页复习用 */
+export interface MissedItem {
+  text: string;
+  pinyin: string[];
+  isHanzi: boolean;
+  count: number;
+}
+
+export interface ToneConfusion {
+  expected: Tone;
+  heard: Tone;
+  count: number;
+}
+
+export interface GameStats {
+  score: number;
+  hits: number;
+  misses: number;
+  /** 切中 / (切中 + 漏掉)；一个都没出现时为 null */
+  accuracy: number | null;
+  toneErrors: number;
+  /** 按次数从多到少 */
+  toneConfusions: ToneConfusion[];
+  /** 按漏掉次数从多到少 */
+  missed: MissedItem[];
+}
+
 export interface HeardLine {
   text: string;
   /** 切中水果的字的区间，HUD 高亮 */
@@ -44,6 +71,10 @@ const PRACTICE_TIME_SCALE = 0.65;
 /** 水果飞行速度倍数：轨迹不变，只是飞得更慢，给玩家更多时间读 */
 const FRUIT_SPEED = 0.5;
 const MAX_STEP = 1 / 60;
+/** 掉一条命后难度回退的秒数 */
+const SETBACK_SECONDS = 20;
+/** 同一个字同时最多几个（允许两个，读一次切两个是连击的乐趣） */
+const MAX_SAME_TEXT = 2;
 
 export class Game {
   state: GameState = 'menu';
@@ -52,8 +83,10 @@ export class Game {
   score = 0;
   lives = START_LIVES;
   heard: HeardLine = { text: '', hits: [], isFinal: true };
-  /** 没切到的字 → 次数，结算复习用 */
-  readonly missed = new Map<string, number>();
+  /** 没切到的字，结算复习用（按水果上的文字归并） */
+  private readonly missed = new Map<string, MissedItem>();
+  /** "应该是 X 声，读成了 Y 声" 的次数，键为 `${expected}-${heard}` */
+  private readonly toneConfusions = new Map<string, ToneConfusion>();
   hits = 0;
   toneErrors = 0;
   /** 刚掉了一条命：红心抖动、屏幕边缘闪红，剩余秒数 */
@@ -97,12 +130,28 @@ export class Game {
     this.hits = 0;
     this.toneErrors = 0;
     this.missed.clear();
+    this.toneConfusions.clear();
     this.heard = { text: '', hits: [], isFinal: true };
     this.consumed = 0;
     this.spawner = new Spawner(this.config.difficulty);
     this.hurt = 0;
     this.events = [{ type: 'start' }];
     this.state = 'playing';
+  }
+
+  stats(): GameStats {
+    const missed = [...this.missed.values()].sort((a, b) => b.count - a.count);
+    const misses = missed.reduce((n, m) => n + m.count, 0);
+    const total = this.hits + misses;
+    return {
+      score: this.score,
+      hits: this.hits,
+      misses,
+      accuracy: total > 0 ? this.hits / total : null,
+      toneErrors: this.toneErrors,
+      toneConfusions: [...this.toneConfusions.values()].sort((a, b) => b.count - a.count),
+      missed,
+    };
   }
 
   /** 取走本帧之前发生的事件 */
@@ -163,24 +212,55 @@ export class Game {
     const pool = this.config.pool;
     if (pool.length === 0) return;
     this.events.push({ type: 'throw' });
-    const entry = pool[Math.floor(Math.random() * pool.length)];
+    const entry = this.pickEntry(pool);
     const isBomb = this.config.bombs && Math.random() < BOMB_CHANCE;
 
     const r = this.radiusFor(entry.display);
     const g = this.gravity;
-    const x0 = this.width * (0.15 + Math.random() * 0.7);
+    const x0 = this.pickLaunchX(r);
     const y0 = this.height + r;
     // 顶点在屏幕上方 15%–45% 处
     const apexY = this.height * (0.15 + Math.random() * 0.3);
     const vy = launchSpeed(y0 - apexY, g);
     const flightTime = (-2 * vy) / g;
-    const xTarget = this.width * (0.2 + Math.random() * 0.6);
+    // 横向漂移不要太大：斜着飞过整个屏幕的水果容易和别的叠在一起
+    const drift = (Math.random() - 0.5) * this.width * 0.35;
+    const xTarget = Math.min(this.width * 0.9, Math.max(this.width * 0.1, x0 + drift));
     const vx = (xTarget - x0) / flightTime;
 
     const id = `f${this.nextId++}`;
     const hue = FRUIT_HUES[Math.floor(Math.random() * FRUIT_HUES.length)];
     const Ctor = isBomb ? Bomb : Fruit;
     this.fruits.push(new Ctor(id, entry.display, entry.pinyin, entry.isHanzi, r, hue, x0, y0, vx, vy));
+  }
+
+  /** 随机挑一个，尽量避开场上已经有 MAX_SAME_TEXT 个的字 */
+  private pickEntry(pool: PoolEntry[]): PoolEntry {
+    const onScreen = new Map<string, number>();
+    for (const f of this.fruits) if (f.state === 'flying') onScreen.set(f.text, (onScreen.get(f.text) ?? 0) + 1);
+    let entry = pool[Math.floor(Math.random() * pool.length)];
+    for (let i = 0; i < 8 && (onScreen.get(entry.display) ?? 0) >= MAX_SAME_TEXT; i++) {
+      entry = pool[Math.floor(Math.random() * pool.length)];
+    }
+    return entry;
+  }
+
+  /** 在几个随机位置里选离场上水果最远的，避免叠在一起看不清 */
+  private pickLaunchX(radius: number): number {
+    const flying = this.fruits.filter((f) => f.state === 'flying');
+    const margin = Math.min(0.15 * this.width, Math.max(radius * 1.2, 0.08 * this.width));
+    const span = this.width - 2 * margin;
+    let best = margin + Math.random() * span;
+    let bestDist = -1;
+    for (let i = 0; i < 6; i++) {
+      const x = margin + Math.random() * span;
+      const dist = flying.length === 0 ? Infinity : Math.min(...flying.map((f) => Math.abs(f.x - x)));
+      if (dist > bestDist) {
+        best = x;
+        bestDist = dist;
+      }
+    }
+    return best;
   }
 
   /** 字号固定为基础半径（≥ 直径的 50%），文字太长时把水果放大 */
@@ -194,7 +274,9 @@ export class Game {
   private fallOut(f: Fruit): void {
     f.state = 'gone';
     if (f.isBomb) return;
-    this.missed.set(f.text, (this.missed.get(f.text) ?? 0) + 1);
+    const item = this.missed.get(f.text);
+    if (item) item.count += 1;
+    else this.missed.set(f.text, { text: f.text, pinyin: f.pinyin, isHanzi: f.isHanzi, count: 1 });
     this.events.push({ type: 'miss' });
     // 在掉下去的地方标一个 ✕
     const x = Math.min(this.width - 30, Math.max(30, f.x));
@@ -206,6 +288,7 @@ export class Game {
     if (this.isPractice) return;
     this.lives -= 1;
     this.hurt = 0.5;
+    this.spawner.setback(SETBACK_SECONDS);
     if (this.lives <= 0) this.gameOver();
   }
 
@@ -255,6 +338,10 @@ export class Game {
       f.shake = 0.4;
       f.feedbackCooldown = TONE_FEEDBACK_COOLDOWN;
       this.toneErrors += 1;
+      const key = `${miss.expected}-${miss.heard}`;
+      const c = this.toneConfusions.get(key);
+      if (c) c.count += 1;
+      else this.toneConfusions.set(key, { expected: miss.expected, heard: miss.heard, count: 1 });
       this.events.push({ type: 'toneMiss' });
       const msg = S.toneMiss(formatSyllable(miss.base, miss.heard), formatSyllable(miss.base, miss.expected));
       this.effects.text(f.x, f.y - f.radius - 16, msg, '#ffe082', 22, 1.8);

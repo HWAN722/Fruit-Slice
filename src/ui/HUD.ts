@@ -31,12 +31,14 @@ export class HUD {
     if (!label) return;
     const { ctx } = this;
     const color = MIC_COLORS[status];
-    const size = 20;
+    // 窄屏（手机竖屏）顶部放不下分数、状态和红心，状态挪到第二行
+    const narrow = w < 640;
+    const size = narrow ? 17 : 20;
     ctx.font = `bold ${size}px ${FONT_FAMILY}`;
     const textW = ctx.measureText(label).width;
     const iconW = 22;
-    const x0 = (w - iconW - 8 - textW) / 2;
-    const y = 18;
+    const x0 = Math.max(16, (w - iconW - 8 - textW) / 2);
+    const y = narrow ? 86 : 18;
 
     // 监听中时图标后面有一圈呼吸光
     if (status === 'listening') {
@@ -52,7 +54,7 @@ export class HUD {
 
     if (detail) {
       let ly = y + size + 10;
-      for (const line of this.wrap(detail, 16, Math.min(w - 32, 560))) {
+      for (const line of this.wrap(detail, 16, Math.min(w - (narrow ? 96 : 32), 560))) {
         this.outlined(line, w / 2, ly, 16, 'rgba(255,255,255,0.85)', 'center');
         ly += 22;
       }
@@ -129,9 +131,6 @@ export class HUD {
 
     this.drawMic(mic, w);
     this.drawHeard(game, w, h);
-
-    if (game.state === 'paused') this.overlay(w, h, S.pausedTitle, [S.pausedHint]);
-    else if (game.state === 'over') this.drawResult(game, best, w, h);
     ctx.restore();
   }
 
@@ -192,39 +191,5 @@ export class HUD {
       ctx.fillText(p.s, x, y);
       x += ctx.measureText(p.s).width;
     }
-  }
-
-  private overlay(w: number, h: number, title: string, lines: string[]): number {
-    const { ctx } = this;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 0, w, h);
-    const titleSize = Math.min(64, w / 9);
-    let y = h * 0.28;
-    this.outlined(title, w / 2, y, titleSize, '#ffd54a', 'center');
-    y += titleSize + 24;
-    for (const line of lines) {
-      this.outlined(line, w / 2, y, 24, '#ffffff', 'center');
-      y += 40;
-    }
-    return y;
-  }
-
-  private drawResult(game: Game, best: number, w: number, h: number): void {
-    let y = this.overlay(w, h, S.gameOver, [S.score(game.score), S.best(Math.max(best, game.score))]);
-    y += 10;
-    const missed = [...game.missed.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
-    if (missed.length === 0) {
-      this.outlined(S.missedNone, w / 2, y, 22, '#a5d6a7', 'center');
-    } else {
-      this.outlined(S.missedTitle, w / 2, y, 22, '#ffe0b2', 'center');
-      y += 36;
-      // 按屏幕宽度折行
-      const perLine = Math.max(4, Math.floor((w - 40) / 64));
-      for (let i = 0; i < missed.length && i < perLine * 3; i += perLine) {
-        this.outlined(missed.slice(i, i + perLine).join('  '), w / 2, y, 28, '#ffffff', 'center');
-        y += 40;
-      }
-    }
-    this.outlined(S.restartHint, w / 2, y + 20, 22, '#ffd54a', 'center');
   }
 }

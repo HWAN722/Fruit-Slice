@@ -166,3 +166,93 @@ describe('comboNotes / popScale', () => {
     expect(popScale(1)).toBe(1);
   });
 });
+
+describe('Game.stats（结算页）', () => {
+  it('统计切中、漏掉、正确率，漏掉的按次数排序并带拼音', () => {
+    const game = newGame();
+    addFruit(game, '妈', 'mā');
+    game.handleTranscript('妈', true);
+    for (const [text, py] of [['山', 'shān'], ['天', 'tiān'], ['山', 'shān']]) {
+      const f = addFruit(game, text, py);
+      f.y = game.height + 500;
+      f.vy = 100;
+      game.update(0.016);
+    }
+    const s = game.stats();
+    expect(s.hits).toBe(1);
+    expect(s.misses).toBe(3);
+    expect(s.accuracy).toBeCloseTo(0.25);
+    expect(s.missed.map((m) => [m.text, m.count])).toEqual([
+      ['山', 2],
+      ['天', 1],
+    ]);
+    expect(s.missed[0].pinyin).toEqual(['shān']);
+  });
+
+  it('还没出现过水果时正确率为 null', () => {
+    expect(newGame().stats().accuracy).toBeNull();
+  });
+
+  it('统计声调混淆，按次数排序', () => {
+    const game = newGame();
+    game.config.match = { ...game.config.match, toneMode: 'glyph' };
+    addFruit(game, 'mā', 'mā');
+    game.handleTranscript('麻', true); // 一声读成二声
+    addFruit(game, 'shān', 'shān');
+    game.handleTranscript('闪', true); // 一声读成三声
+    addFruit(game, 'tiān', 'tiān');
+    game.handleTranscript('田', true); // 一声读成二声
+    const s = game.stats();
+    expect(s.toneErrors).toBe(3);
+    expect(s.toneConfusions).toEqual([
+      { expected: 1, heard: 2, count: 2 },
+      { expected: 1, heard: 3, count: 1 },
+    ]);
+  });
+
+  it('重新开局时清空统计', () => {
+    const game = newGame();
+    addFruit(game, '妈', 'mā');
+    game.handleTranscript('妈', true);
+    game.start();
+    expect(game.stats().hits).toBe(0);
+  });
+});
+
+describe('Game 出果', () => {
+  function playingGame(): Game {
+    const game = new Game({
+      pool: [
+        { display: '妈', pinyin: ['mā'], isHanzi: true },
+        { display: '爸', pinyin: ['bà'], isHanzi: true },
+      ],
+      difficulty: 'hard',
+      bombs: false,
+      match: DEFAULT_MATCH_OPTIONS,
+    });
+    game.resize(1000, 800);
+    game.start();
+    return game;
+  }
+
+  it('同一个字同时最多 2 个（池里有别的字可选时）', () => {
+    for (let run = 0; run < 20; run++) {
+      const game = playingGame();
+      for (let i = 0; i < 200; i++) game.update(0.05);
+      const counts = new Map<string, number>();
+      for (const f of game.fruits) counts.set(f.text, (counts.get(f.text) ?? 0) + 1);
+      for (const n of counts.values()) expect(n).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('水果从屏幕内抛出，落点也在屏幕内', () => {
+    const game = playingGame();
+    for (let i = 0; i < 400; i++) {
+      game.update(0.05);
+      for (const f of game.fruits) {
+        expect(f.x).toBeGreaterThanOrEqual(0);
+        expect(f.x).toBeLessThanOrEqual(1000);
+      }
+    }
+  });
+});

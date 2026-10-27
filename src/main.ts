@@ -10,6 +10,8 @@ import { VoskInput } from './speech/VoskInput';
 import { loadBest, loadSettings, saveBest, saveSettings } from './storage';
 import { HUD } from './ui/HUD';
 import { MenuScene } from './ui/MenuScene';
+import { PauseMenu } from './ui/PauseMenu';
+import { ResultScene } from './ui/ResultScene';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { SpeechDebugPanel } from './ui/SpeechDebugPanel';
 import { S } from './ui/strings';
@@ -26,7 +28,7 @@ const input = must('kbd-input', HTMLInputElement);
 const maybeCtx = canvas.getContext('2d');
 if (!maybeCtx) throw new Error('浏览器不支持 Canvas 2D');
 const ctx = maybeCtx;
-input.placeholder = S.keyboardPlaceholder;
+input.placeholder = window.innerWidth < 480 ? S.keyboardPlaceholderShort : S.keyboardPlaceholder;
 
 const settings = loadSettings();
 
@@ -107,25 +109,57 @@ settingsPanel.onPreviewSound = () => {
   sound.play({ type: 'slice', count: 1 });
 };
 
+/** 主循环据此发现状态变化（例如掉完命 → 结算） */
+let lastState = game.state;
+const pauseMenu = new PauseMenu();
+const result = new ResultScene();
+
+/** 触屏设备上不自动聚焦输入框，否则一开局就弹出软键盘挡住半个屏幕 */
+const finePointer = window.matchMedia('(pointer: fine)').matches;
+function focusInput(): void {
+  if (finePointer && game.state === 'playing') input.focus({ preventScroll: true });
+}
+
 function startGame(): void {
   if (!menu.canStart) return;
   game.config = configFrom(settings);
   // 浏览器只允许在点击/按键事件里开启声音
   sound.unlock();
   menu.hide();
+  result.hide();
   form.hidden = false;
   game.start();
   // 在点击/按键事件里启动，浏览器才会弹出麦克风授权
-  syncMic();
-  input.focus();
+  syncUi();
+  focusInput();
 }
 
 function showMenu(): void {
   game.toMenu();
-  syncMic();
+  result.hide();
   form.hidden = true;
+  syncUi();
   menu.show(best);
 }
+
+function togglePause(): void {
+  game.togglePause();
+  syncUi();
+  focusInput();
+}
+
+/** 游戏状态变化后：麦克风、暂停按钮/暂停页 */
+function syncUi(): void {
+  lastState = game.state;
+  syncMic();
+  pauseMenu.sync(game.state);
+}
+
+pauseMenu.onPause = togglePause;
+pauseMenu.onResume = togglePause;
+pauseMenu.onMenu = showMenu;
+result.onAgain = startGame;
+result.onMenu = showMenu;
 
 function resize(): void {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -180,23 +214,19 @@ window.addEventListener('keydown', (e) => {
       return;
     }
     case 'playing':
-      if (e.key === 'Escape') {
-        game.togglePause();
-        syncMic();
-      }
+      if (e.key === 'Escape') togglePause();
       break;
     case 'paused':
       if (e.key === 'Escape') {
-        game.togglePause();
-        syncMic();
+        togglePause();
       } else if (key === 'm') {
         e.preventDefault();
         showMenu();
-        return;
       }
-      break;
+      return;
     case 'over':
-      if (e.key === 'Enter') {
+      // 焦点在结算页按钮上时 Enter 由按钮自己处理
+      if (e.key === 'Enter' && (e.target as HTMLElement | null)?.tagName !== 'BUTTON') {
         e.preventDefault();
         startGame();
       } else if (key === 'm') {
@@ -204,37 +234,34 @@ window.addEventListener('keydown', (e) => {
         showMenu();
         return;
       }
-      break;
+      return;
   }
-  input.focus();
+  focusInput();
 });
-canvas.addEventListener('pointerdown', () => {
-  if (game.state === 'playing') input.focus();
-});
+canvas.addEventListener('pointerdown', focusInput);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && game.state === 'playing') game.togglePause();
+  if (document.hidden && game.state === 'playing') togglePause();
 });
 
 let last = performance.now();
-let wasOver = false;
-let lastState = game.state;
 function frame(now: number): void {
   const dt = (now - last) / 1000;
   last = now;
   game.update(dt);
   for (const e of game.drainEvents()) sound.play(e);
   if (game.state !== lastState) {
-    lastState = game.state;
-    syncMic();
+    const becameOver = game.state === 'over';
+    syncUi();
+    if (becameOver) {
+      const newRecord = game.score > best;
+      if (newRecord) {
+        best = game.score;
+        saveBest(best);
+      }
+      result.show(game.stats(), best, newRecord);
+    }
   }
-
-  const isOver = game.state === 'over';
-  if (isOver && !wasOver && game.score > best) {
-    best = game.score;
-    saveBest(best);
-  }
-  wasOver = isOver;
 
   renderer.draw(game, dt);
   hud.draw(game, best, speech.status);
