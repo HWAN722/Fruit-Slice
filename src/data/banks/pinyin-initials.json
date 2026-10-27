@@ -1,0 +1,145 @@
+{
+  "id": "pinyin-initials",
+  "name": "声母",
+  "type": "pinyin",
+  "items": [
+    {
+      "text": "b",
+      "pinyin": [
+        "bō"
+      ]
+    },
+    {
+      "text": "p",
+      "pinyin": [
+        "pō"
+      ]
+    },
+    {
+      "text": "m",
+      "pinyin": [
+        "mō"
+      ]
+    },
+    {
+      "text": "f",
+      "pinyin": [
+        "fó"
+      ]
+    },
+    {
+      "text": "d",
+      "pinyin": [
+        "dé"
+      ]
+    },
+    {
+      "text": "t",
+      "pinyin": [
+        "tè"
+      ]
+    },
+    {
+      "text": "n",
+      "pinyin": [
+        "ne"
+      ]
+    },
+    {
+      "text": "l",
+      "pinyin": [
+        "lè"
+      ]
+    },
+    {
+      "text": "g",
+      "pinyin": [
+        "gē"
+      ]
+    },
+    {
+      "text": "k",
+      "pinyin": [
+        "kē"
+      ]
+    },
+    {
+      "text": "h",
+      "pinyin": [
+        "hē"
+      ]
+    },
+    {
+      "text": "j",
+      "pinyin": [
+        "jī"
+      ]
+    },
+    {
+      "text": "q",
+      "pinyin": [
+        "qī"
+      ]
+    },
+    {
+      "text": "x",
+      "pinyin": [
+        "xī"
+      ]
+    },
+    {
+      "text": "zh",
+      "pinyin": [
+        "zhī"
+      ]
+    },
+    {
+      "text": "ch",
+      "pinyin": [
+        "chī"
+      ]
+    },
+    {
+      "text": "sh",
+      "pinyin": [
+        "shī"
+      ]
+    },
+    {
+      "text": "r",
+      "pinyin": [
+        "rì"
+      ]
+    },
+    {
+      "text": "z",
+      "pinyin": [
+        "zī"
+      ]
+    },
+    {
+      "text": "c",
+      "pinyin": [
+        "cī"
+      ]
+    },
+    {
+      "text": "s",
+      "pinyin": [
+        "sī"
+      ]
+    },
+    {
+      "text": "y",
+      "pinyin": [
+        "yī"
+      ]
+    },
+    {
+      "text": "w",
+      "pinyin": [
+        "wū"
+      ]
+    }
+  ]
+}

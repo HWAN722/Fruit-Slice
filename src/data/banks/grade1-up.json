@@ -1,0 +1,432 @@
+{
+  "id": "grade1-up",
+  "name": "一年级上册（节选）",
+  "type": "hanzi",
+  "items": [
+    {
+      "text": "天",
+      "pinyin": [
+        "tiān"
+      ]
+    },
+    {
+      "text": "地",
+      "pinyin": [
+        "dì"
+      ]
+    },
+    {
+      "text": "人",
+      "pinyin": [
+        "rén"
+      ]
+    },
+    {
+      "text": "你",
+      "pinyin": [
+        "nǐ"
+      ]
+    },
+    {
+      "text": "我",
+      "pinyin": [
+        "wǒ"
+      ]
+    },
+    {
+      "text": "他",
+      "pinyin": [
+        "tā"
+      ]
+    },
+    {
+      "text": "一",
+      "pinyin": [
+        "yī"
+      ]
+    },
+    {
+      "text": "二",
+      "pinyin": [
+        "èr"
+      ]
+    },
+    {
+      "text": "三",
+      "pinyin": [
+        "sān"
+      ]
+    },
+    {
+      "text": "四",
+      "pinyin": [
+        "sì"
+      ]
+    },
+    {
+      "text": "五",
+      "pinyin": [
+        "wǔ"
+      ]
+    },
+    {
+      "text": "上",
+      "pinyin": [
+        "shàng"
+      ]
+    },
+    {
+      "text": "下",
+      "pinyin": [
+        "xià"
+      ]
+    },
+    {
+      "text": "口",
+      "pinyin": [
+        "kǒu"
+      ]
+    },
+    {
+      "text": "耳",
+      "pinyin": [
+        "ěr"
+      ]
+    },
+    {
+      "text": "目",
+      "pinyin": [
+        "mù"
+      ]
+    },
+    {
+      "text": "手",
+      "pinyin": [
+        "shǒu"
+      ]
+    },
+    {
+      "text": "足",
+      "pinyin": [
+        "zú"
+      ]
+    },
+    {
+      "text": "站",
+      "pinyin": [
+        "zhàn"
+      ]
+    },
+    {
+      "text": "坐",
+      "pinyin": [
+        "zuò"
+      ]
+    },
+    {
+      "text": "日",
+      "pinyin": [
+        "rì"
+      ]
+    },
+    {
+      "text": "月",
+      "pinyin": [
+        "yuè"
+      ]
+    },
+    {
+      "text": "水",
+      "pinyin": [
+        "shuǐ"
+      ]
+    },
+    {
+      "text": "火",
+      "pinyin": [
+        "huǒ"
+      ]
+    },
+    {
+      "text": "山",
+      "pinyin": [
+        "shān"
+      ]
+    },
+    {
+      "text": "石",
+      "pinyin": [
+        "shí"
+      ]
+    },
+    {
+      "text": "田",
+      "pinyin": [
+        "tián"
+      ]
+    },
+    {
+      "text": "禾",
+      "pinyin": [
+        "hé"
+      ]
+    },
+    {
+      "text": "对",
+      "pinyin": [
+        "duì"
+      ]
+    },
+    {
+      "text": "云",
+      "pinyin": [
+        "yún"
+      ]
+    },
+    {
+      "text": "雨",
+      "pinyin": [
+        "yǔ"
+      ]
+    },
+    {
+      "text": "风",
+      "pinyin": [
+        "fēng"
+      ]
+    },
+    {
+      "text": "花",
+      "pinyin": [
+        "huā"
+      ]
+    },
+    {
+      "text": "鸟",
+      "pinyin": [
+        "niǎo"
+      ]
+    },
+    {
+      "text": "虫",
+      "pinyin": [
+        "chóng"
+      ]
+    },
+    {
+      "text": "六",
+      "pinyin": [
+        "liù"
+      ]
+    },
+    {
+      "text": "七",
+      "pinyin": [
+        "qī"
+      ]
+    },
+    {
+      "text": "八",
+      "pinyin": [
+        "bā"
+      ]
+    },
+    {
+      "text": "九",
+      "pinyin": [
+        "jiǔ"
+      ]
+    },
+    {
+      "text": "十",
+      "pinyin": [
+        "shí"
+      ]
+    },
+    {
+      "text": "爸",
+      "pinyin": [
+        "bà"
+      ]
+    },
+    {
+      "text": "妈",
+      "pinyin": [
+        "mā"
+      ]
+    },
+    {
+      "text": "马",
+      "pinyin": [
+        "mǎ"
+      ]
+    },
+    {
+      "text": "土",
+      "pinyin": [
+        "tǔ"
+      ]
+    },
+    {
+      "text": "不",
+      "pinyin": [
+        "bù"
+      ]
+    },
+    {
+      "text": "画",
+      "pinyin": [
+        "huà"
+      ]
+    },
+    {
+      "text": "打",
+      "pinyin": [
+        "dǎ"
+      ]
+    },
+    {
+      "text": "棋",
+      "pinyin": [
+        "qí"
+      ]
+    },
+    {
+      "text": "鸡",
+      "pinyin": [
+        "jī"
+      ]
+    },
+    {
+      "text": "字",
+      "pinyin": [
+        "zì"
+      ]
+    },
+    {
+      "text": "词",
+      "pinyin": [
+        "cí"
+      ]
+    },
+    {
+      "text": "语",
+      "pinyin": [
+        "yǔ"
+      ]
+    },
+    {
+      "text": "句",
+      "pinyin": [
+        "jù"
+      ]
+    },
+    {
+      "text": "子",
+      "pinyin": [
+        "zǐ"
+      ]
+    },
+    {
+      "text": "桌",
+      "pinyin": [
+        "zhuō"
+      ]
+    },
+    {
+      "text": "纸",
+      "pinyin": [
+        "zhǐ"
+      ]
+    },
+    {
+      "text": "文",
+      "pinyin": [
+        "wén"
+      ]
+    },
+    {
+      "text": "数",
+      "pinyin": [
+        "shù",
+        "shǔ"
+      ]
+    },
+    {
+      "text": "学",
+      "pinyin": [
+        "xué"
+      ]
+    },
+    {
+      "text": "音",
+      "pinyin": [
+        "yīn"
+      ]
+    },
+    {
+      "text": "乐",
+      "pinyin": [
+        "yuè",
+        "lè"
+      ]
+    },
+    {
+      "text": "长",
+      "pinyin": [
+        "cháng",
+        "zhǎng"
+      ]
+    },
+    {
+      "text": "大",
+      "pinyin": [
+        "dà"
+      ]
+    },
+    {
+      "text": "小",
+      "pinyin": [
+        "xiǎo"
+      ]
+    },
+    {
+      "text": "中",
+      "pinyin": [
+        "zhōng",
+        "zhòng"
+      ]
+    },
+    {
+      "text": "少",
+      "pinyin": [
+        "shǎo",
+        "shào"
+      ]
+    },
+    {
+      "text": "多",
+      "pinyin": [
+        "duō"
+      ]
+    },
+    {
+      "text": "来",
+      "pinyin": [
+        "lái"
+      ]
+    },
+    {
+      "text": "去",
+      "pinyin": [
+        "qù"
+      ]
+    },
+    {
+      "text": "白",
+      "pinyin": [
+        "bái"
+      ]
+    }
+  ]
+}

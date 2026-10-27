@@ -1,0 +1,39 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #2b1d14;
+  font-family: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+}
+
+#kbd-form {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+}
+
+#kbd-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  outline: none;
+}
+
+#kbd-input:focus {
+  border-color: #ffd54a;
+}

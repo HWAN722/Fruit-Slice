@@ -1,0 +1,151 @@
+{
+  "id": "pinyin-finals",
+  "name": "单韵母",
+  "type": "pinyin",
+  "items": [
+    {
+      "text": "ā",
+      "pinyin": [
+        "ā"
+      ]
+    },
+    {
+      "text": "á",
+      "pinyin": [
+        "á"
+      ]
+    },
+    {
+      "text": "ǎ",
+      "pinyin": [
+        "ǎ"
+      ]
+    },
+    {
+      "text": "à",
+      "pinyin": [
+        "à"
+      ]
+    },
+    {
+      "text": "ō",
+      "pinyin": [
+        "ō"
+      ]
+    },
+    {
+      "text": "ó",
+      "pinyin": [
+        "ó"
+      ]
+    },
+    {
+      "text": "ǒ",
+      "pinyin": [
+        "ǒ"
+      ]
+    },
+    {
+      "text": "ò",
+      "pinyin": [
+        "ò"
+      ]
+    },
+    {
+      "text": "ē",
+      "pinyin": [
+        "ē"
+      ]
+    },
+    {
+      "text": "é",
+      "pinyin": [
+        "é"
+      ]
+    },
+    {
+      "text": "ě",
+      "pinyin": [
+        "ě"
+      ]
+    },
+    {
+      "text": "è",
+      "pinyin": [
+        "è"
+      ]
+    },
+    {
+      "text": "ī",
+      "pinyin": [
+        "yī"
+      ]
+    },
+    {
+      "text": "í",
+      "pinyin": [
+        "yí"
+      ]
+    },
+    {
+      "text": "ǐ",
+      "pinyin": [
+        "yǐ"
+      ]
+    },
+    {
+      "text": "ì",
+      "pinyin": [
+        "yì"
+      ]
+    },
+    {
+      "text": "ū",
+      "pinyin": [
+        "wū"
+      ]
+    },
+    {
+      "text": "ú",
+      "pinyin": [
+        "wú"
+      ]
+    },
+    {
+      "text": "ǔ",
+      "pinyin": [
+        "wǔ"
+      ]
+    },
+    {
+      "text": "ù",
+      "pinyin": [
+        "wù"
+      ]
+    },
+    {
+      "text": "ǖ",
+      "pinyin": [
+        "yū"
+      ]
+    },
+    {
+      "text": "ǘ",
+      "pinyin": [
+        "yú"
+      ]
+    },
+    {
+      "text": "ǚ",
+      "pinyin": [
+        "yǔ"
+      ]
+    },
+    {
+      "text": "ǜ",
+      "pinyin": [
+        "yù"
+      ]
+    }
+  ]
+}

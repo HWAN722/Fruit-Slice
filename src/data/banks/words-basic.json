@@ -1,0 +1,97 @@
+{
+  "id": "words-basic",
+  "name": "常用词语",
+  "type": "hanzi",
+  "items": [
+    {
+      "text": "妈妈",
+      "pinyin": [
+        "mā ma"
+      ]
+    },
+    {
+      "text": "爸爸",
+      "pinyin": [
+        "bà ba"
+      ]
+    },
+    {
+      "text": "你好",
+      "pinyin": [
+        "nǐ hǎo"
+      ]
+    },
+    {
+      "text": "老师",
+      "pinyin": [
+        "lǎo shī"
+      ]
+    },
+    {
+      "text": "同学",
+      "pinyin": [
+        "tóng xué"
+      ]
+    },
+    {
+      "text": "学校",
+      "pinyin": [
+        "xué xiào"
+      ]
+    },
+    {
+      "text": "朋友",
+      "pinyin": [
+        "péng you"
+      ]
+    },
+    {
+      "text": "谢谢",
+      "pinyin": [
+        "xiè xie"
+      ]
+    },
+    {
+      "text": "再见",
+      "pinyin": [
+        "zài jiàn"
+      ]
+    },
+    {
+      "text": "大家",
+      "pinyin": [
+        "dà jiā"
+      ]
+    },
+    {
+      "text": "一个",
+      "pinyin": [
+        "yī gè"
+      ]
+    },
+    {
+      "text": "不要",
+      "pinyin": [
+        "bù yào"
+      ]
+    },
+    {
+      "text": "小鸟",
+      "pinyin": [
+        "xiǎo niǎo"
+      ]
+    },
+    {
+      "text": "水果",
+      "pinyin": [
+        "shuǐ guǒ"
+      ]
+    },
+    {
+      "text": "早上",
+      "pinyin": [
+        "zǎo shang"
+      ]
+    }
+  ]
+}

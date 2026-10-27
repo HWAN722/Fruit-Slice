@@ -1,0 +1,103 @@
+{
+  "id": "pinyin-whole",
+  "name": "整体认读音节",
+  "type": "pinyin",
+  "items": [
+    {
+      "text": "zhi",
+      "pinyin": [
+        "zhi"
+      ]
+    },
+    {
+      "text": "chi",
+      "pinyin": [
+        "chi"
+      ]
+    },
+    {
+      "text": "shi",
+      "pinyin": [
+        "shi"
+      ]
+    },
+    {
+      "text": "ri",
+      "pinyin": [
+        "ri"
+      ]
+    },
+    {
+      "text": "zi",
+      "pinyin": [
+        "zi"
+      ]
+    },
+    {
+      "text": "ci",
+      "pinyin": [
+        "ci"
+      ]
+    },
+    {
+      "text": "si",
+      "pinyin": [
+        "si"
+      ]
+    },
+    {
+      "text": "yi",
+      "pinyin": [
+        "yi"
+      ]
+    },
+    {
+      "text": "wu",
+      "pinyin": [
+        "wu"
+      ]
+    },
+    {
+      "text": "yu",
+      "pinyin": [
+        "yu"
+      ]
+    },
+    {
+      "text": "ye",
+      "pinyin": [
+        "ye"
+      ]
+    },
+    {
+      "text": "yue",
+      "pinyin": [
+        "yue"
+      ]
+    },
+    {
+      "text": "yuan",
+      "pinyin": [
+        "yuan"
+      ]
+    },
+    {
+      "text": "yin",
+      "pinyin": [
+        "yin"
+      ]
+    },
+    {
+      "text": "yun",
+      "pinyin": [
+        "yun"
+      ]
+    },
+    {
+      "text": "ying",
+      "pinyin": [
+        "ying"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "id": "pinyin-compound-finals",
+  "name": "复韵母",
+  "type": "pinyin",
+  "items": [
+    {
+      "text": "ai",
+      "pinyin": [
+        "ai"
+      ]
+    },
+    {
+      "text": "ei",
+      "pinyin": [
+        "ei"
+      ]
+    },
+    {
+      "text": "ui",
+      "pinyin": [
+        "wei"
+      ]
+    },
+    {
+      "text": "ao",
+      "pinyin": [
+        "ao"
+      ]
+    },
+    {
+      "text": "ou",
+      "pinyin": [
+        "ou"
+      ]
+    },
+    {
+      "text": "iu",
+      "pinyin": [
+        "you"
+      ]
+    },
+    {
+      "text": "ie",
+      "pinyin": [
+        "ye"
+      ]
+    },
+    {
+      "text": "üe",
+      "pinyin": [
+        "yue"
+      ]
+    },
+    {
+      "text": "er",
+      "pinyin": [
+        "er"
+      ]
+    },
+    {
+      "text": "an",
+      "pinyin": [
+        "an"
+      ]
+    },
+    {
+      "text": "en",
+      "pinyin": [
+        "en"
+      ]
+    },
+    {
+      "text": "in",
+      "pinyin": [
+        "yin"
+      ]
+    },
+    {
+      "text": "un",
+      "pinyin": [
+        "wen"
+      ]
+    },
+    {
+      "text": "ün",
+      "pinyin": [
+        "yun"
+      ]
+    },
+    {
+      "text": "ang",
+      "pinyin": [
+        "ang"
+      ]
+    },
+    {
+      "text": "eng",
+      "pinyin": [
+        "eng"
+      ]
+    },
+    {
+      "text": "ing",
+      "pinyin": [
+        "ying"
+      ]
+    },
+    {
+      "text": "ong",
+      "pinyin": [
+        "ong"
+      ]
+    }
+  ]
+}
