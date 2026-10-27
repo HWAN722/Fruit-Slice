@@ -1,4 +1,6 @@
-import type { TranscriptSource } from './TranscriptSource';
+import type { MicStatus, SpeechEngine } from './TranscriptSource';
+
+export type { MicStatus } from './TranscriptSource';
 
 // TypeScript 的 DOM 类型里没有 Web Speech API 的识别部分，这里只声明用到的成员
 export interface RecognitionAlternative {
@@ -44,12 +46,6 @@ export function getRecognitionCtor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/**
- * 麦克风状态：
- * - idle：还没开始；starting：正在打开；listening：监听中；paused：游戏暂停
- * - denied：没有权限（不再重试）；no-device：没有麦克风；network：识别服务连不上；unsupported：浏览器不支持
- */
-export type MicStatus = 'idle' | 'starting' | 'listening' | 'paused' | 'denied' | 'no-device' | 'network' | 'unsupported';
 
 /**
  * - continuous：一直开着，引擎自己断句（Chrome 默认行为）
@@ -63,7 +59,7 @@ const MAX_RESTART_DELAY = 5000;
  * 封装 Web Speech API：持续识别 + 中间结果，静音结束后自动重启，错误转成状态。
  * 对外只通过 onTranscript / onStatus 回调，游戏逻辑不直接依赖 Web Speech API。
  */
-export class SpeechInput implements TranscriptSource {
+export class SpeechInput implements SpeechEngine {
   onTranscript: ((text: string, isFinal: boolean) => void) | null = null;
   onStatus: ((status: MicStatus) => void) | null = null;
   /** 诊断用：识别引擎的各个事件 */

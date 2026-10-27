@@ -1,6 +1,6 @@
 import type { Game } from '../game/Game';
 import { FONT_FAMILY } from '../game/Renderer';
-import type { MicStatus } from '../speech/SpeechInput';
+import type { MicStatus } from '../speech/TranscriptSource';
 import { S } from './strings';
 
 /** 输入框占用的底部高度（见 style.css） */
@@ -9,12 +9,14 @@ const INPUT_AREA = 76;
 /** 分数、生命、最近识别结果，以及开始/暂停/结束的覆盖层 */
 const MIC_COLORS: Record<MicStatus, string> = {
   idle: 'rgba(255,255,255,0.5)',
+  loading: '#ffe082',
   starting: '#ffe082',
   listening: '#81c784',
   paused: 'rgba(255,255,255,0.5)',
   denied: '#ef5350',
   'no-device': '#ef5350',
   network: '#ffb74d',
+  'model-error': '#ef5350',
   unsupported: '#ef5350',
 };
 
@@ -44,7 +46,8 @@ export class HUD {
       ctx.arc(x0 + iconW / 2, y + 11, 16 + pulse * 4, 0, Math.PI * 2);
       ctx.fill();
     }
-    this.micIcon(x0 + iconW / 2, y, color, status === 'denied' || status === 'no-device' || status === 'unsupported');
+    const crossed = status === 'denied' || status === 'no-device' || status === 'unsupported' || status === 'model-error';
+    this.micIcon(x0 + iconW / 2, y, color, crossed);
     this.outlined(label, x0 + iconW + 8, y, size, color, 'left');
 
     if (detail) {

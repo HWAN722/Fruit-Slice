@@ -10,4 +10,8 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
     rules: { '@typescript-eslint/no-explicit-any': 'error' },
   },
+  {
+    files: ['scripts/**'],
+    languageOptions: { globals: globals.node },
+  },
 );

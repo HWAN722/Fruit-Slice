@@ -1,12 +1,13 @@
 import { FUZZY_RULES } from '../match/fuzzy';
 import type { ToneMode } from '../match/matcher';
 import type { RecognitionMode } from '../speech/SpeechInput';
-import { AVAILABLE_TONE_MODES, effectiveShowTones, type Settings } from '../settings';
+import { AVAILABLE_TONE_MODES, effectiveShowTones, type Settings, type SpeechEngineKind } from '../settings';
 import { checkbox, h, segmented, slider } from './dom';
 import { S } from './strings';
 
 const TONE_MODES: ToneMode[] = ['off', 'glyph', 'pitch'];
 const SPEECH_MODES: RecognitionMode[] = ['continuous', 'single'];
+const SPEECH_ENGINES: SpeechEngineKind[] = ['offline', 'browser'];
 
 /** 设置面板：声调、匹配、游戏、语音识别 */
 export class SettingsPanel {
@@ -132,13 +133,20 @@ export class SettingsPanel {
       ),
 
       h('h2', null, T.speech),
-      h('h3', null, T.speechMode),
+      h('h3', null, T.speechEngine),
       segmented(
-        SPEECH_MODES.map((m) => ({ value: m, label: T.speechModes[m] })),
+        SPEECH_ENGINES.map((m) => ({ value: m, label: T.speechEngines[m] })),
+        s.speechEngine,
+        (m) => this.set('speechEngine', m),
+      ),
+      h('p', { class: 'note' }, T.speechEngineHints[s.speechEngine]),
+      h('h3', null, T.browserOnly),
+      segmented(
+        SPEECH_MODES.map((m) => ({ value: m, label: T.speechModes[m], disabled: s.speechEngine !== 'browser' })),
         s.speechMode,
         (m) => this.set('speechMode', m),
       ),
-      checkbox(T.fastEndpoint, s.fastEndpoint, (on) => this.set('fastEndpoint', on)),
+      checkbox(T.fastEndpoint, s.fastEndpoint, (on) => this.set('fastEndpoint', on), s.speechEngine !== 'browser'),
       h('p', { class: 'note' }, T.debugHint),
 
       h('h2', null, T.limitsTitle),

@@ -3,7 +3,9 @@ import { Renderer } from './game/Renderer';
 import { poolFor, toMatchOptions, type Settings } from './settings';
 import { KeyboardInput } from './speech/KeyboardInput';
 import { SpeechInput } from './speech/SpeechInput';
+import type { SpeechEngine } from './speech/TranscriptSource';
 import { VoiceActivity } from './speech/VoiceActivity';
+import { VoskInput } from './speech/VoskInput';
 import { loadBest, loadSettings, saveBest, saveSettings } from './storage';
 import { HUD } from './ui/HUD';
 import { MenuScene } from './ui/MenuScene';
@@ -36,30 +38,41 @@ const renderer = new Renderer(ctx, window.innerWidth, window.innerHeight);
 const hud = new HUD(ctx);
 let best = loadBest();
 
-// 语音为主；键盘输入始终可用（调试 + 不支持语音/拒绝权限时兜底）
-const speech = new SpeechInput(undefined, settings.speechMode);
-// 自己检测说完了没有：识别引擎自带的断句要等较长的静音，检测到说完就让它立刻出结果
+// 语音识别两种引擎：离线（Vosk，本地运行）和浏览器自带（Web Speech，需要联网）。
+// 键盘输入始终可用（调试 + 不支持语音/拒绝权限时兜底）
+const browserSpeech = new SpeechInput(undefined, settings.speechMode);
+const offlineSpeech = new VoskInput();
+const engineFor = (s: Settings): SpeechEngine => (s.speechEngine === 'offline' ? offlineSpeech : browserSpeech);
+let speech = engineFor(settings);
+// 在菜单里就开始加载离线模型，开局时不用等
+if (speech === offlineSpeech) offlineSpeech.preload();
+
+// 自己检测说完了没有：浏览器识别自带的断句要等较长的静音，检测到说完就让它立刻出结果
 const vad = new VoiceActivity();
 const debugPanel = new SpeechDebugPanel(vad, settings);
 if (new URLSearchParams(location.search).has('debug')) debugPanel.toggle();
-speech.onDebug = (e) => debugPanel.log(e);
 vad.onEvent = (e) => {
   debugPanel.onVad(e);
-  if (e.type === 'end' && settings.fastEndpoint) speech.flush();
+  if (e.type === 'end' && settings.fastEndpoint && speech === browserSpeech) browserSpeech.flush();
 };
 const keyboard = new KeyboardInput(form, input);
-for (const source of [speech, keyboard]) {
+for (const source of [browserSpeech, offlineSpeech]) {
+  source.onDebug = (e) => debugPanel.log(e);
+}
+for (const source of [browserSpeech, offlineSpeech, keyboard]) {
   source.onTranscript = (text, isFinal) => game.handleTranscript(text, isFinal);
 }
 keyboard.start();
 // 开发时在控制台用 __game / __speech 查看、调试状态
-if (import.meta.env.DEV) Object.assign(window, { __game: game, __speech: speech, __vad: vad });
+if (import.meta.env.DEV) Object.assign(window, { __game: game, __speech: () => speech, __vad: vad });
 
 /** 只在游戏进行中监听；暂停、结束时停止识别（onend 里也不会再自动重启） */
 function syncMic(): void {
   if (game.state === 'playing') {
     speech.start();
-    if (speech.supported && speech.status !== 'denied') void vad.start();
+    // 音量检测用于浏览器识别的快速断句，以及诊断面板里的延迟统计
+    const needVad = speech === browserSpeech || debugPanel.visible;
+    if (needVad && speech.supported && speech.status !== 'denied') void vad.start();
   } else {
     if (speech.status !== 'idle') speech.stop();
     vad.stop();
@@ -69,7 +82,15 @@ function syncMic(): void {
 /** 设置有改动：保存，并立即应用到语音识别（游戏相关的设置在下一局开始时生效） */
 function settingsChanged(): void {
   saveSettings(settings);
-  speech.setMode(settings.speechMode);
+  browserSpeech.setMode(settings.speechMode);
+  const next = engineFor(settings);
+  if (next !== speech) {
+    if (speech.status !== 'idle') speech.stop();
+    vad.stop();
+    speech = next;
+    if (speech === offlineSpeech) offlineSpeech.preload();
+    syncMic();
+  }
 }
 
 const menu = new MenuScene(settings, settingsChanged);

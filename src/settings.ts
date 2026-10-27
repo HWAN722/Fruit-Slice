@@ -4,6 +4,8 @@ import { FUZZY_RULES, type FuzzyRule } from './match/fuzzy';
 import type { MatchOptions, ToneMode } from './match/matcher';
 import type { RecognitionMode } from './speech/SpeechInput';
 
+export type SpeechEngineKind = 'offline' | 'browser';
+
 /** 所有玩家设置，存 localStorage */
 export interface Settings {
   mode: DisplayMode;
@@ -26,6 +28,8 @@ export interface Settings {
   /** 0–1 */
   volume: number;
 
+  /** 离线（Vosk，本地运行）或浏览器自带（Web Speech，需要联网） */
+  speechEngine: SpeechEngineKind;
   speechMode: RecognitionMode;
   /** 自己检测到说完后立刻让识别引擎出结果 */
   fastEndpoint: boolean;
@@ -45,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   bombs: false,
   sound: true,
   volume: 0.8,
+  speechEngine: 'offline',
   speechMode: 'continuous',
   fastEndpoint: true,
 };
@@ -92,6 +97,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     bombs: bool(r.bombs, d.bombs),
     sound: bool(r.sound, d.sound),
     volume: num(r.volume, 0, 1, d.volume),
+    speechEngine: oneOf(r.speechEngine, ['offline', 'browser'], d.speechEngine),
     speechMode: oneOf(r.speechMode, ['continuous', 'single'], d.speechMode),
     fastEndpoint: bool(r.fastEndpoint, d.fastEndpoint),
   };
