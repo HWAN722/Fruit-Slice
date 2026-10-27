@@ -17,6 +17,16 @@ export interface GameConfig {
   match: MatchOptions;
 }
 
+/** 游戏里发生的事，主循环每帧取走（播放音效等），游戏逻辑本身不依赖音频 */
+export type GameEvent =
+  | { type: 'start' }
+  | { type: 'throw' }
+  | { type: 'slice'; count: number }
+  | { type: 'bomb' }
+  | { type: 'miss' }
+  | { type: 'toneMiss' }
+  | { type: 'gameOver' };
+
 export interface HeardLine {
   text: string;
   /** 切中水果的字的区间，HUD 高亮 */
@@ -46,6 +56,8 @@ export class Game {
   readonly missed = new Map<string, number>();
   hits = 0;
   toneErrors = 0;
+  /** 刚掉了一条命：红心抖动、屏幕边缘闪红，剩余秒数 */
+  hurt = 0;
 
   width = 800;
   height = 600;
@@ -54,6 +66,7 @@ export class Game {
   private nextId = 0;
   /** 当前这段识别结果中已经用掉的长度（中间结果会不断变长，已切过的字不重复计算） */
   private consumed = 0;
+  private events: GameEvent[] = [];
 
   constructor(public config: GameConfig) {
     this.spawner = new Spawner(config.difficulty);
@@ -87,7 +100,14 @@ export class Game {
     this.heard = { text: '', hits: [], isFinal: true };
     this.consumed = 0;
     this.spawner = new Spawner(this.config.difficulty);
+    this.hurt = 0;
+    this.events = [{ type: 'start' }];
     this.state = 'playing';
+  }
+
+  /** 取走本帧之前发生的事件 */
+  drainEvents(): GameEvent[] {
+    return this.events.splice(0);
   }
 
   /** 回到菜单：清空场上的水果和效果 */
@@ -95,6 +115,7 @@ export class Game {
     this.fruits = [];
     this.effects.clear();
     this.heard = { text: '', hits: [], isFinal: true };
+    this.events = [];
     this.state = 'menu';
   }
 
@@ -132,12 +153,16 @@ export class Game {
       this.fruits = this.fruits.filter((f) => f.state === 'flying');
     }
 
-    if (this.state !== 'paused') this.effects.update(dt, this.gravity, this.height);
+    if (this.state !== 'paused') {
+      this.effects.update(dt, this.gravity, this.height);
+      this.hurt = Math.max(0, this.hurt - realDt);
+    }
   }
 
   private spawn(): void {
     const pool = this.config.pool;
     if (pool.length === 0) return;
+    this.events.push({ type: 'throw' });
     const entry = pool[Math.floor(Math.random() * pool.length)];
     const isBomb = this.config.bombs && Math.random() < BOMB_CHANCE;
 
@@ -170,14 +195,24 @@ export class Game {
     f.state = 'gone';
     if (f.isBomb) return;
     this.missed.set(f.text, (this.missed.get(f.text) ?? 0) + 1);
+    this.events.push({ type: 'miss' });
+    // 在掉下去的地方标一个 ✕
+    const x = Math.min(this.width - 30, Math.max(30, f.x));
+    this.effects.text(x, this.height - 110, '✕', '#ef5350', 40, 1, true);
+    this.loseLife();
+  }
+
+  private loseLife(): void {
     if (this.isPractice) return;
     this.lives -= 1;
+    this.hurt = 0.5;
     if (this.lives <= 0) this.gameOver();
   }
 
   private gameOver(): void {
     this.lives = 0;
     this.state = 'over';
+    this.events.push({ type: 'gameOver' });
   }
 
   /**
@@ -220,6 +255,7 @@ export class Game {
       f.shake = 0.4;
       f.feedbackCooldown = TONE_FEEDBACK_COOLDOWN;
       this.toneErrors += 1;
+      this.events.push({ type: 'toneMiss' });
       const msg = S.toneMiss(formatSyllable(miss.base, miss.heard), formatSyllable(miss.base, miss.expected));
       this.effects.text(f.x, f.y - f.radius - 16, msg, '#ffe082', 22, 1.8);
     }
@@ -235,19 +271,20 @@ export class Game {
     const n = sliced.length;
     const bonus = n >= 2 ? (n - 1) * COMBO_BONUS_PER_EXTRA : 0;
     this.score += n * POINTS_PER_FRUIT + bonus;
-    for (const f of sliced) this.effects.text(f.x, f.y, `+${POINTS_PER_FRUIT}`, '#ffffff', 26);
+    this.events.push({ type: 'slice', count: n });
+    for (const f of sliced) this.effects.text(f.x, f.y, `+${POINTS_PER_FRUIT}`, '#ffffff', 26, 1.2, true);
     if (n >= 2) {
       const cx = sliced.reduce((s, f) => s + f.x, 0) / n;
       const cy = sliced.reduce((s, f) => s + f.y, 0) / n;
-      this.effects.text(cx, cy - 50, S.combo(n, bonus), '#ffd54a', 34, 1.5);
+      // 连击越多字越大
+      this.effects.text(cx, cy - 50, S.combo(n, bonus), '#ffd54a', Math.min(56, 30 + n * 6), 1.5, true);
     }
   }
 
   private detonate(b: Fruit): void {
     b.state = 'sliced';
     this.effects.explode(b.x, b.y, b.radius);
-    if (this.isPractice) return;
-    this.lives -= 1;
-    if (this.lives <= 0) this.gameOver();
+    this.events.push({ type: 'bomb' });
+    this.loseLife();
   }
 }

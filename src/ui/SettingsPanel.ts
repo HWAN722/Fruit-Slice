@@ -12,6 +12,8 @@ const SPEECH_ENGINES: SpeechEngineKind[] = ['offline', 'browser'];
 /** 设置面板：声调、匹配、游戏、语音识别 */
 export class SettingsPanel {
   onClose: (() => void) | null = null;
+  /** 调音量时试听一下 */
+  onPreviewSound: (() => void) | null = null;
 
   private readonly root: HTMLElement;
   private readonly card: HTMLElement;
@@ -66,6 +68,18 @@ export class SettingsPanel {
 
     const confidenceLabel = h('span', null, T.confidence(s.toneConfidenceThreshold));
     const volumeLabel = h('span', null, T.volume(s.volume));
+    const volumeSlider = slider(
+      s.volume,
+      0,
+      1,
+      (v) => {
+        volumeLabel.textContent = T.volume(v);
+        this.set('volume', v, false);
+      },
+      !s.sound,
+    );
+    // 松手时试听
+    volumeSlider.addEventListener('change', () => this.onPreviewSound?.());
 
     const fuzzy = h(
       'div',
@@ -121,16 +135,11 @@ export class SettingsPanel {
 
       h('h2', null, T.game),
       checkbox(T.bombs, s.bombs, (on) => this.set('bombs', on)),
-      checkbox(T.sound, s.sound, (on) => this.set('sound', on)),
-      h(
-        'label',
-        { class: `range${s.sound ? '' : ' disabled'}` },
-        volumeLabel,
-        slider(s.volume, 0, 1, (v) => {
-          volumeLabel.textContent = T.volume(v);
-          this.set('volume', v, false);
-        }, !s.sound),
-      ),
+      checkbox(T.sound, s.sound, (on) => {
+        this.set('sound', on);
+        if (on) this.onPreviewSound?.();
+      }),
+      h('label', { class: `range${s.sound ? '' : ' disabled'}` }, volumeLabel, volumeSlider),
 
       h('h2', null, T.speech),
       h('h3', null, T.speechEngine),

@@ -87,7 +87,7 @@ npm run build    # 生产构建，输出到 dist/
 ## 技术栈
 
 - Vite + TypeScript（strict）
-- 原生 Canvas 2D 渲染，美术全部用代码绘制
+- 原生 Canvas 2D 渲染，美术全部用代码绘制；音效用 Web Audio 实时合成，没有音频文件
 - 语音识别：Vosk（vosk-browser，离线）/ Web Speech API
 - [pinyin-pro](https://github.com/zh-lx/pinyin-pro)：汉字转拼音
 - Vitest 单元测试
@@ -99,6 +99,7 @@ npm run build    # 生产构建，输出到 dist/
 src/
   main.ts            入口：Canvas、输入、主循环
   game/              游戏逻辑（水果、物理、出果节奏、效果）和渲染
+  audio/             合成音效
   speech/            语音识别、音量检测、键盘输入
   match/             识别文本 → 匹配水果（核心逻辑）
   tone/              声调相关（变调规则）
@@ -130,7 +131,7 @@ tests/               单元测试
 - [x] M2：匹配逻辑 + 单元测试
 - [x] M3：语音识别、识别结果显示
 - [x] M4：菜单、字库选择、设置保存
-- [ ] M5：音效、动效打磨
+- [x] M5：音效、动效打磨
 - [ ] M6：结算复习页、难度调优、移动端适配
 - [ ] M7：音高分析声调判断、校准
 

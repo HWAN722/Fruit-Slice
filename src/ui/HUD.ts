@@ -117,7 +117,15 @@ export class HUD {
     this.outlined(S.best(Math.max(best, game.score)), 20, 54, 18, '#ffe0b2', 'left');
 
     if (game.isPractice) this.outlined(S.practice, w - 20, 18, 22, '#a5d6a7', 'right');
-    else for (let i = 0; i < 3; i++) this.heart(w - 40 - i * 42, 34, 16, i < game.lives);
+    else {
+      for (let i = 0; i < 3; i++) {
+        // 刚失去的那颗心抖一下、放大一下
+        const justLost = game.hurt > 0 && i === game.lives;
+        const shake = justLost ? Math.sin(this.time * 60) * 6 * (game.hurt / 0.5) : 0;
+        const size = justLost ? 16 * (1 + 0.5 * (game.hurt / 0.5)) : 16;
+        this.heart(w - 40 - i * 42 + shake, 34, size, i < game.lives);
+      }
+    }
 
     this.drawMic(mic, w);
     this.drawHeard(game, w, h);

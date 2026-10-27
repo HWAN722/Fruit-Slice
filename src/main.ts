@@ -1,3 +1,4 @@
+import { Sound } from './audio/Sound';
 import { Game, type GameConfig } from './game/Game';
 import { Renderer } from './game/Renderer';
 import { poolFor, toMatchOptions, type Settings } from './settings';
@@ -34,6 +35,8 @@ function configFrom(s: Settings): GameConfig {
 }
 
 const game = new Game(configFrom(settings));
+const sound = new Sound();
+sound.setVolume(settings.sound, settings.volume);
 const renderer = new Renderer(ctx, window.innerWidth, window.innerHeight);
 const hud = new HUD(ctx);
 let best = loadBest();
@@ -82,6 +85,7 @@ function syncMic(): void {
 /** 设置有改动：保存，并立即应用到语音识别（游戏相关的设置在下一局开始时生效） */
 function settingsChanged(): void {
   saveSettings(settings);
+  sound.setVolume(settings.sound, settings.volume);
   browserSpeech.setMode(settings.speechMode);
   const next = engineFor(settings);
   if (next !== speech) {
@@ -98,10 +102,16 @@ const settingsPanel = new SettingsPanel(settings, settingsChanged);
 menu.onStart = startGame;
 menu.onOpenSettings = () => settingsPanel.open();
 settingsPanel.onClose = () => menu.refresh();
+settingsPanel.onPreviewSound = () => {
+  sound.unlock();
+  sound.play({ type: 'slice', count: 1 });
+};
 
 function startGame(): void {
   if (!menu.canStart) return;
   game.config = configFrom(settings);
+  // 浏览器只允许在点击/按键事件里开启声音
+  sound.unlock();
   menu.hide();
   form.hidden = false;
   game.start();
@@ -213,6 +223,7 @@ function frame(now: number): void {
   const dt = (now - last) / 1000;
   last = now;
   game.update(dt);
+  for (const e of game.drainEvents()) sound.play(e);
   if (game.state !== lastState) {
     lastState = game.state;
     syncMic();

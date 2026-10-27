@@ -46,6 +46,28 @@ export interface FloatText {
   size: number;
   life: number;
   maxLife: number;
+  /** 出现时先放大再回弹 */
+  pop: boolean;
+}
+
+/** 切开瞬间的一道刀光 */
+export interface Slash {
+  x: number;
+  y: number;
+  angle: number;
+  length: number;
+  life: number;
+  maxLife: number;
+}
+
+/** 扩散的圆环（炸弹冲击波） */
+export interface Ring {
+  x: number;
+  y: number;
+  maxRadius: number;
+  color: string;
+  life: number;
+  maxLife: number;
 }
 
 const MAX_PARTICLES = 400;
@@ -56,8 +78,12 @@ export class Effects {
   particles: Particle[] = [];
   splats: Splat[] = [];
   texts: FloatText[] = [];
+  slashes: Slash[] = [];
+  rings: Ring[] = [];
   /** 屏幕震动剩余秒数 */
   screenShake = 0;
+  /** 全屏白光（炸弹），0–1 */
+  flash = 0;
 
   slice(x: number, y: number, vx: number, vy: number, radius: number, hue: number, text: string): void {
     const cutAngle = Math.random() * Math.PI;
@@ -81,6 +107,7 @@ export class Effects {
         life: 2.5,
       });
     }
+    this.slashes.push({ x, y, angle: cutAngle, length: radius * 3.2, life: 0.18, maxLife: 0.18 });
     this.burst(x, y, radius, hue, 28);
     this.splats.push({ x, y, radius: radius * 1.3, hue, life: 2.2, maxLife: 2.2, seed: Math.random() * 1000 });
     if (this.splats.length > MAX_SPLATS) this.splats.shift();
@@ -88,7 +115,9 @@ export class Effects {
 
   explode(x: number, y: number, radius: number): void {
     this.burst(x, y, radius * 1.5, 30, 50);
+    this.rings.push({ x, y, maxRadius: radius * 5, color: '255,200,120', life: 0.45, maxLife: 0.45 });
     this.screenShake = 0.4;
+    this.flash = 0.7;
   }
 
   private burst(x: number, y: number, radius: number, hue: number, count: number): void {
@@ -110,8 +139,8 @@ export class Effects {
     }
   }
 
-  text(x: number, y: number, text: string, color: string, size: number, life = 1.2): void {
-    this.texts.push({ x, y, text, color, size, life, maxLife: life });
+  text(x: number, y: number, text: string, color: string, size: number, life = 1.2, pop = false): void {
+    this.texts.push({ x, y, text, color, size, life, maxLife: life, pop });
   }
 
   update(dt: number, gravity: number, height: number): void {
@@ -141,7 +170,13 @@ export class Effects {
     }
     this.texts = this.texts.filter((t) => t.life > 0);
 
+    for (const s of this.slashes) s.life -= dt;
+    this.slashes = this.slashes.filter((s) => s.life > 0);
+    for (const r of this.rings) r.life -= dt;
+    this.rings = this.rings.filter((r) => r.life > 0);
+
     this.screenShake = Math.max(0, this.screenShake - dt);
+    this.flash = Math.max(0, this.flash - dt * 3);
   }
 
   clear(): void {
@@ -149,6 +184,9 @@ export class Effects {
     this.particles = [];
     this.splats = [];
     this.texts = [];
+    this.slashes = [];
+    this.rings = [];
     this.screenShake = 0;
+    this.flash = 0;
   }
 }

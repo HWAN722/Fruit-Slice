@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { comboNotes } from '../src/audio/Sound';
 import { Fruit } from '../src/game/Fruit';
 import { Game } from '../src/game/Game';
+import { popScale } from '../src/game/Renderer';
 import { DEFAULT_MATCH_OPTIONS } from '../src/match/matcher';
 
 let nextId = 0;
@@ -77,5 +79,90 @@ describe('Game.handleTranscript：中间结果', () => {
     addFruit(game, '妈', 'mā');
     game.handleTranscript('妈', true);
     expect(game.score).toBe(30);
+  });
+});
+
+describe('Game 事件（音效用）', () => {
+  it('开局有 start 事件，取走后清空', () => {
+    const game = newGame();
+    expect(game.drainEvents()).toEqual([{ type: 'start' }]);
+    expect(game.drainEvents()).toEqual([]);
+  });
+
+  it('切开时有 slice 事件，带切开的数量', () => {
+    const game = newGame();
+    game.drainEvents();
+    addFruit(game, 'mā', 'mā');
+    addFruit(game, '妈', 'mā');
+    game.handleTranscript('妈', true);
+    expect(game.drainEvents()).toEqual([{ type: 'slice', count: 2 }]);
+  });
+
+  it('声调读错有 toneMiss 事件', () => {
+    const game = newGame();
+    game.config.match = { ...game.config.match, toneMode: 'glyph' };
+    game.drainEvents();
+    addFruit(game, 'mā', 'mā');
+    game.handleTranscript('麻', true);
+    expect(game.drainEvents()).toEqual([{ type: 'toneMiss' }]);
+  });
+
+  it('水果掉出屏幕：miss 事件，掉命并闪红；最后一条命掉完时 gameOver', () => {
+    const game = newGame();
+    game.lives = 1;
+    game.drainEvents();
+    const f = addFruit(game, '妈', 'mā');
+    f.y = game.height + 500;
+    f.vy = 100;
+    game.update(0.016);
+    expect(game.drainEvents().map((e) => e.type)).toEqual(['miss', 'gameOver']);
+    expect(game.state).toBe('over');
+    expect(game.lives).toBe(0);
+  });
+
+  it('掉命后 hurt 计时，随时间消失', () => {
+    const game = newGame();
+    const f = addFruit(game, '妈', 'mā');
+    f.y = game.height + 500;
+    f.vy = 100;
+    game.update(0.016);
+    expect(game.lives).toBe(2);
+    expect(game.hurt).toBeGreaterThan(0);
+    for (let i = 0; i < 10; i++) game.update(0.1);
+    expect(game.hurt).toBe(0);
+  });
+
+  it('练习模式掉出屏幕不掉命', () => {
+    const game = new Game({ pool: [], difficulty: 'practice', bombs: false, match: DEFAULT_MATCH_OPTIONS });
+    game.start();
+    const f = addFruit(game, '妈', 'mā');
+    f.y = game.height + 500;
+    f.vy = 100;
+    game.update(0.016);
+    expect(game.lives).toBe(3);
+    expect(game.hurt).toBe(0);
+  });
+
+  it('回到菜单时清空事件', () => {
+    const game = newGame();
+    game.toMenu();
+    expect(game.drainEvents()).toEqual([]);
+  });
+});
+
+describe('comboNotes / popScale', () => {
+  it('切开一个没有连击音，越多音越多，最多 6 个，音越来越高', () => {
+    expect(comboNotes(1)).toEqual([]);
+    expect(comboNotes(3)).toHaveLength(3);
+    expect(comboNotes(10)).toHaveLength(6);
+    const notes = comboNotes(6);
+    expect([...notes].sort((a, b) => a - b)).toEqual(notes);
+  });
+
+  it('弹出动画：从小变大再回到 1', () => {
+    expect(popScale(0)).toBeCloseTo(0.4);
+    expect(popScale(0.15)).toBeCloseTo(1.3);
+    expect(popScale(0.25)).toBe(1);
+    expect(popScale(1)).toBe(1);
   });
 });

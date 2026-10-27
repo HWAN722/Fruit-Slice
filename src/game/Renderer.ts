@@ -38,9 +38,28 @@ export class Renderer {
       if (f.isBomb) this.drawBomb(f, fontSize);
       else this.drawFruit(f, fontSize);
     }
+    this.drawSlashes(game);
+    this.drawRings(game);
     this.drawParticles(game);
     this.drawTexts(game);
     ctx.restore();
+
+    if (game.effects.flash > 0) {
+      ctx.fillStyle = `rgba(255,245,220,${game.effects.flash * 0.6})`;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
+    // 掉命时屏幕边缘闪红
+    if (game.hurt > 0) {
+      const a = (game.hurt / 0.5) * 0.45;
+      const g = ctx.createRadialGradient(
+        this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.35,
+        this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.75,
+      );
+      g.addColorStop(0, 'rgba(229,57,53,0)');
+      g.addColorStop(1, `rgba(229,57,53,${a})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
   }
 
   // ---------- 背景：深色木纹 ----------
@@ -262,6 +281,43 @@ export class Renderer {
     }
   }
 
+  /** 刀光：中间亮、两头细的一道白光，很快消失 */
+  private drawSlashes(game: Game): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const s of game.effects.slashes) {
+      const t = s.life / s.maxLife;
+      // 刀光先快速划出，再淡出
+      const reach = s.length * Math.min(1, (1 - t) * 4 + 0.3);
+      const dx = (Math.cos(s.angle) * reach) / 2;
+      const dy = (Math.sin(s.angle) * reach) / 2;
+      ctx.globalAlpha = t;
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 14 * t + 4;
+      ctx.beginPath();
+      ctx.moveTo(s.x - dx, s.y - dy);
+      ctx.lineTo(s.x + dx, s.y + dy);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4 * t + 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  private drawRings(game: Game): void {
+    const { ctx } = this;
+    for (const r of game.effects.rings) {
+      const t = 1 - r.life / r.maxLife;
+      ctx.strokeStyle = `rgba(${r.color},${1 - t})`;
+      ctx.lineWidth = 10 * (1 - t) + 2;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.maxRadius * (0.2 + 0.8 * t), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
   private drawParticles(game: Game): void {
     const { ctx } = this;
     for (const p of game.effects.particles) {
@@ -280,13 +336,26 @@ export class Renderer {
     for (const t of game.effects.texts) {
       ctx.globalAlpha = Math.min(1, (t.life / t.maxLife) * 2);
       ctx.font = `bold ${t.size}px ${FONT_FAMILY}`;
-      const x = Math.max(16 + ctx.measureText(t.text).width / 2, Math.min(this.width - 16 - ctx.measureText(t.text).width / 2, t.x));
+      const half = ctx.measureText(t.text).width / 2;
+      const x = Math.max(16 + half, Math.min(this.width - 16 - half, t.x));
+      ctx.save();
+      ctx.translate(x, t.y);
+      if (t.pop) ctx.scale(popScale(t.maxLife - t.life), popScale(t.maxLife - t.life));
       ctx.lineWidth = t.size * 0.18;
       ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-      ctx.strokeText(t.text, x, t.y);
+      ctx.strokeText(t.text, 0, 0);
       ctx.fillStyle = t.color;
-      ctx.fillText(t.text, x, t.y);
+      ctx.fillText(t.text, 0, 0);
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
+}
+
+/** 弹出动画：0.25 秒内从 0.4 放大到 1.3 再回到 1 */
+export function popScale(age: number): number {
+  const d = 0.25;
+  if (age >= d) return 1;
+  const t = age / d;
+  return t < 0.6 ? 0.4 + (1.3 - 0.4) * (t / 0.6) : 1.3 - 0.3 * ((t - 0.6) / 0.4);
 }
