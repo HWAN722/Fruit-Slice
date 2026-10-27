@@ -15,20 +15,31 @@ export class PitchTracker {
   onFrame: ((frame: PitchFrame) => void) | null = null;
   range: VoiceRange = { ...DEFAULT_RANGE };
   readonly tones = new ToneTracker();
+  /** 最近一次收到音频帧的时间（performance.now），0 表示还没收到过 */
+  lastFrameAt = 0;
 
   private segmenter = new SyllableSegmenter();
   private stream: MediaStream | null = null;
   private audio: AudioContext | null = null;
   private node: AudioWorkletNode | null = null;
   private generation = 0;
+  /** 正在打开中的那次 start；重复调用时直接复用 */
+  private starting: Promise<boolean> | null = null;
 
   get active(): boolean {
     return this.node !== null;
   }
 
   /** 打开麦克风开始分析；失败时返回 false（游戏退回字形推断） */
-  async start(): Promise<boolean> {
-    if (this.active) return true;
+  start(): Promise<boolean> {
+    if (this.active) return Promise.resolve(true);
+    this.starting ??= this.open().finally(() => {
+      this.starting = null;
+    });
+    return this.starting;
+  }
+
+  private async open(): Promise<boolean> {
     const gen = this.generation;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -36,6 +47,8 @@ export class PitchTracker {
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 },
       });
       const audio = new AudioContext();
+      // 不在点击事件里创建时可能是暂停状态
+      if (audio.state === 'suspended') void audio.resume();
       await audio.audioWorklet.addModule(workletUrl);
       if (gen !== this.generation) {
         stream.getTracks().forEach((t) => t.stop());
@@ -71,6 +84,7 @@ export class PitchTracker {
   private handleFrame(raw: PitchFrame): void {
     // 换成主线程的时钟，方便和识别结果的时间比较
     const frame = { ...raw, time: performance.now() };
+    this.lastFrameAt = frame.time;
     this.onFrame?.(frame);
     for (const segment of this.segmenter.feed(frame)) {
       const result = classifyTone(segment, this.range);

@@ -539,3 +539,71 @@ label.disabled,
 .calib-message.warn {
   color: #ff8a80;
 }
+
+/* ---------- 录音工具（?record） ---------- */
+
+#recorder {
+  z-index: 4;
+}
+
+.card.recorder {
+  width: min(720px, 100%);
+}
+
+.rec-name {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font: inherit;
+}
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.card button.rec-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff4e0;
+  font-size: 16px;
+}
+
+.rec-item.current {
+  border-color: #ffd54a;
+  background: rgba(255, 213, 74, 0.15);
+}
+
+.rec-item.right {
+  border-color: #81c784;
+}
+
+.rec-item.wrong {
+  border-color: #ef5350;
+}
+
+.rec-char {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.rec-pinyin {
+  color: #ffe0b2;
+}
+
+.rec-result {
+  font-size: 13px;
+  opacity: 0.8;
+}

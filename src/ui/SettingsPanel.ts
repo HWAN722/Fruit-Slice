@@ -123,6 +123,7 @@ export class SettingsPanel {
         s.toneMode !== 'off',
       ),
       checkbox(T.sandhi, s.sandhi, (on) => this.set('sandhi', on), s.toneMode === 'off'),
+      checkbox(T.showPitchCurve, s.showPitchCurve, (on) => this.set('showPitchCurve', on), s.toneMode !== 'pitch'),
       h(
         'label',
         { class: `range${pitchOn ? '' : ' disabled'}` },

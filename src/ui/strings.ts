@@ -64,6 +64,7 @@ export const S = {
     showTones: '拼音显示声调符号',
     showTonesForced: '开启声调匹配时必须显示',
     sandhi: '按变调后的实际读音判断（如"你好"读 ní hǎo）',
+    showPitchCurve: '读错声调时画出音高曲线对比（音高分析；练习模式下总是显示）',
     confidence: (v: number) => `声调判定置信度阈值：${Math.round(v * 100)}%`,
     confidenceHint: '仅音高分析使用；低于阈值时不判错，避免冤枉',
     recalibrate: '校准音域',
@@ -107,6 +108,9 @@ export const S = {
     ],
   },
   calibrateHint: '建议在设置里校准音域，声调判断会更准',
+  pitchUnavailable: '这台设备没法同时做音高分析，已改用字形推断',
+  curveExpected: '标准',
+  curveHeard: '你读的',
   calibration: {
     title: '校准音域',
     intro: '每个人说话的高低不一样。请依次读下面四个字，每读完一个停一下。',
@@ -121,6 +125,20 @@ export const S = {
     retry: '再试一次',
     close: '完成',
     cancel: '取消',
+  },
+  recorder: {
+    title: '录制声调测试音频',
+    intro:
+      '用真人声音测试声调判断。按"开始"后依次读出每个字，每读完一个停一下，会自动切到下一个。第一组"妈麻马骂"同时用来校准音域。录完点"下载"，把压缩包解压到项目的 tests/fixtures/tones/ 目录，运行 npm run test 就会把这套录音算进准确率。',
+    voiceName: '这套录音的名字（英文或拼音，如 child1、dad）',
+    start: '开始',
+    stop: '停一下',
+    listening: (ch: string) => `请读：${ch}`,
+    download: '下载',
+    rerecordHint: '读得不满意可以点那个字重录',
+    result: (ok: number, n: number) => `声调判断：对了 ${ok} / ${n}`,
+    needCalibration: '先录完"妈麻马骂"才能判断声调',
+    micError: '打不开麦克风',
   },
   pause: {
     title: '已暂停',

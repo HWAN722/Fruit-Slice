@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Fruit } from '../src/game/Fruit';
 import { Game } from '../src/game/Game';
-import { DEFAULT_MATCH_OPTIONS } from '../src/match/matcher';
+import { DEFAULT_MATCH_OPTIONS, matchTranscript } from '../src/match/matcher';
 import type { Tone } from '../src/match/normalize';
 import type { SyllableSegment } from '../src/tone/SyllableSegmenter';
+import { standardContour } from '../src/tone/standard';
 import { ToneTracker } from '../src/tone/ToneTracker';
 
 const seg = (end: number): SyllableSegment => ({ start: end - 200, end, frames: [] });
@@ -146,5 +147,52 @@ describe('Game + 音高分析', () => {
     tracker.speaking = true;
     game.handleTranscript('a3', true, false);
     expect(a3.state).toBe('sliced');
+  });
+});
+
+describe('声调对比小图', () => {
+  it('标准曲线：一声平、二声升、三声先降后升、四声降', () => {
+    const c1 = standardContour(1);
+    const c2 = standardContour(2);
+    const c3 = standardContour(3);
+    const c4 = standardContour(4);
+    expect(c1.every((v) => v === 1)).toBe(true);
+    expect(c2[0]).toBeCloseTo(0.5);
+    expect(c2.at(-1)).toBeCloseTo(1);
+    expect(Math.min(...c3)).toBeLessThan(0.05);
+    expect(c3.at(-1)).toBeCloseTo(0.75);
+    expect(c4[0]).toBeCloseTo(1);
+    expect(c4.at(-1)).toBeCloseTo(0);
+    expect(c1).toHaveLength(16);
+  });
+
+  it('音高分析读错声调时，把玩家的曲线带到提示里', () => {
+    const contour = [0.9, 0.7, 0.4, 0.1];
+    const r = matchTranscript(
+      '啊',
+      [{ id: 'a', text: 'ā', pinyin: ['ā'], isBomb: false }],
+      { ...DEFAULT_MATCH_OPTIONS, toneMode: 'pitch' },
+      [{ tone: 4, confidence: 0.9, contour }],
+    );
+    expect(r.toneMisses).toEqual([{ id: 'a', base: 'a', expected: 1, heard: 4, heardContour: contour }]);
+  });
+
+  it('开启时画图，关闭时不画', () => {
+    for (const show of [true, false]) {
+      const game = new Game({
+        pool: [],
+        difficulty: 'normal',
+        bombs: false,
+        match: { ...DEFAULT_MATCH_OPTIONS, toneMode: 'pitch' },
+        showPitchCurve: show,
+      });
+      const tracker = new ToneTracker();
+      game.toneSource = tracker;
+      game.start();
+      game.fruits.push(new Fruit('a', 'ā', ['ā'], false, 40, 30, 100, 300, 0, -100));
+      tracker.add(seg(performance.now()), { tone: 4, confidence: 0.9, contour: [1, 0.5, 0] });
+      game.handleTranscript('啊', true);
+      expect(game.effects.charts).toHaveLength(show ? 1 : 0);
+    }
   });
 });

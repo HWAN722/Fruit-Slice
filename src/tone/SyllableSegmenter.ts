@@ -36,7 +36,7 @@ export const DEFAULT_SEGMENTER_CONFIG: SegmenterConfig = {
   gapMs: 80,
   minSyllableMs: 120,
   floorWindowMs: 2000,
-  valleyDb: 9,
+  valleyDb: 5,
 };
 
 /**

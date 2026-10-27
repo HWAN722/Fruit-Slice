@@ -36,7 +36,13 @@ input.placeholder = window.innerWidth < 480 ? S.keyboardPlaceholderShort : S.key
 const settings = loadSettings();
 
 function configFrom(s: Settings): GameConfig {
-  return { pool: poolFor(s), difficulty: s.difficulty, bombs: s.bombs, match: toMatchOptions(s) };
+  return {
+    pool: poolFor(s),
+    difficulty: s.difficulty,
+    bombs: s.bombs,
+    match: toMatchOptions(s),
+    showPitchCurve: s.showPitchCurve || s.difficulty === 'practice',
+  };
 }
 
 const game = new Game(configFrom(settings));
@@ -77,6 +83,29 @@ keyboard.onTranscript = (text, isFinal) => game.handleTranscript(text, isFinal, 
 const pitch = new PitchTracker();
 pitch.range = loadRange();
 game.toneSource = pitch.tones;
+/**
+ * 手机上语音识别和音高分析可能没法同时占用麦克风。打不开、或者开了几秒都收不到声音时，
+ * 这一局改用字形推断（下一局再试）。
+ */
+const PITCH_NO_AUDIO_MS = 3000;
+let pitchUnavailable = false;
+let pitchStartedAt = 0;
+function startPitch(): void {
+  if (pitch.active) return;
+  pitchStartedAt = performance.now();
+  void pitch.start().then((ok) => {
+    if (!ok && game.state === 'playing' && settings.toneMode === 'pitch') markPitchUnavailable();
+  });
+}
+function markPitchUnavailable(): void {
+  pitchUnavailable = true;
+  game.toneSource = null;
+  pitch.stop();
+}
+function checkPitchAudio(now: number): void {
+  if (pitchUnavailable || game.state !== 'playing' || settings.toneMode !== 'pitch' || pitchStartedAt === 0) return;
+  if (now - pitchStartedAt > PITCH_NO_AUDIO_MS && pitch.lastFrameAt < pitchStartedAt) markPitchUnavailable();
+}
 const calibration = new CalibrationScene();
 calibration.startListening = () => pitch.start();
 calibration.stopListening = () => pitch.stop();
@@ -104,7 +133,7 @@ function syncMic(): void {
     // 音量检测用于浏览器识别的快速断句，以及诊断面板里的延迟统计
     const needVad = speech === browserSpeech || debugPanel.visible;
     if (needVad && speech.supported && speech.status !== 'denied') void vad.start();
-    if (settings.toneMode === 'pitch') void pitch.start();
+    if (settings.toneMode === 'pitch' && !pitchUnavailable) startPitch();
     else pitch.stop();
   } else {
     if (speech.status !== 'idle') speech.stop();
@@ -155,6 +184,9 @@ function focusInput(): void {
 function startGame(): void {
   if (!menu.canStart) return;
   game.config = configFrom(settings);
+  // 每局重新试一次音高分析
+  pitchUnavailable = false;
+  game.toneSource = pitch.tones;
   // 浏览器只允许在点击/按键事件里开启声音
   sound.unlock();
   menu.hide();
@@ -300,10 +332,18 @@ function frame(now: number): void {
   }
 
   renderer.draw(game, dt);
-  const hint = settings.toneMode === 'pitch' && !pitch.range.calibrated ? S.calibrateHint : null;
+  checkPitchAudio(now);
+  let hint: string | null = null;
+  if (settings.toneMode === 'pitch') hint = pitchUnavailable ? S.pitchUnavailable : pitch.range.calibrated ? null : S.calibrateHint;
   hud.draw(game, best, speech.status, hint);
   debugPanel.render();
   requestAnimationFrame(frame);
 }
-showMenu();
+if (new URLSearchParams(location.search).has('record')) {
+  // 开发工具：录真人的标准四声，做声调测试夹具
+  form.hidden = true;
+  void import('./dev/FixtureRecorder').then(({ FixtureRecorder }) => new FixtureRecorder());
+} else {
+  showMenu();
+}
 requestAnimationFrame(frame);

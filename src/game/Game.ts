@@ -15,6 +15,8 @@ export interface GameConfig {
   difficulty: Difficulty;
   bombs: boolean;
   match: MatchOptions;
+  /** 读错声调时画音高曲线对比 */
+  showPitchCurve?: boolean;
 }
 
 /** 游戏里发生的事，主循环每帧取走（播放音效等），游戏逻辑本身不依赖音频 */
@@ -380,6 +382,9 @@ export class Game {
       this.events.push({ type: 'toneMiss' });
       const msg = S.toneMiss(formatSyllable(miss.base, miss.heard), formatSyllable(miss.base, miss.expected));
       this.effects.text(f.x, f.y - f.radius - 16, msg, '#ffe082', 22, 1.8);
+      if (this.config.showPitchCurve && miss.heardContour && miss.heardContour.length > 1) {
+        this.effects.toneChart(f.x, f.y - f.radius - 90, miss.heardContour, miss.expected);
+      }
     }
   }
 

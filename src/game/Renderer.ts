@@ -1,4 +1,6 @@
-import type { Half } from './Effects';
+import { standardContour } from '../tone/standard';
+import { S } from '../ui/strings';
+import type { Half, ToneChart } from './Effects';
 import type { Fruit } from './Fruit';
 import type { Game } from './Game';
 
@@ -42,6 +44,7 @@ export class Renderer {
     this.drawRings(game);
     this.drawParticles(game);
     this.drawTexts(game);
+    for (const c of game.effects.charts) this.drawToneChart(c);
     ctx.restore();
 
     if (game.effects.flash > 0) {
@@ -279,6 +282,67 @@ export class Renderer {
         ctx.fill();
       }
     }
+  }
+
+  /** 声调对比小图：虚线是标准曲线，实线是玩家读的 */
+  private drawToneChart(c: ToneChart): void {
+    const { ctx } = this;
+    const w = 160;
+    const h = 96;
+    const x = Math.max(8, Math.min(this.width - w - 8, c.x - w / 2));
+    const y = Math.max(8, Math.min(this.height - h - 8, c.y - h / 2));
+    const pad = 10;
+    const plotH = h - pad * 2 - 16;
+    const plotW = w - pad * 2;
+    const toY = (level: number) => y + pad + (1 - Math.min(1.15, Math.max(-0.15, level))) * plotH;
+    const line = (values: number[]) => {
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const px = x + pad + (plotW * i) / (values.length - 1);
+        if (i === 0) ctx.moveTo(px, toY(v));
+        else ctx.lineTo(px, toY(v));
+      });
+      ctx.stroke();
+    };
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, (c.life / c.maxLife) * 3);
+    ctx.fillStyle = 'rgba(20,12,6,0.82)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 10);
+    ctx.fill();
+
+    // 五度标记的 5 条横线
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const ly = toY(i / 4);
+      ctx.beginPath();
+      ctx.moveTo(x + pad, ly);
+      ctx.lineTo(x + w - pad, ly);
+      ctx.stroke();
+    }
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash([6, 5]);
+    ctx.strokeStyle = '#81c784';
+    ctx.lineWidth = 4;
+    line(standardContour(c.expected));
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#ffb74d';
+    ctx.lineWidth = 3;
+    line(c.heard);
+
+    ctx.font = `bold 12px ${FONT_FAMILY}`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    const ly = y + h - 12;
+    ctx.fillStyle = '#81c784';
+    ctx.fillText(`┅ ${S.curveExpected}`, x + pad, ly);
+    ctx.fillStyle = '#ffb74d';
+    ctx.fillText(`━ ${S.curveHeard}`, x + w / 2, ly);
+    ctx.restore();
   }
 
   /** 刀光：中间亮、两头细的一道白光，很快消失 */

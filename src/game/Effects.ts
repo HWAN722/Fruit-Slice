@@ -1,3 +1,5 @@
+import type { Tone } from '../match/normalize';
+
 /** 纯视觉效果的状态；游戏逻辑只往里添加，渲染层只读 */
 
 export interface Half {
@@ -60,6 +62,17 @@ export interface Slash {
   maxLife: number;
 }
 
+/** 声调读错时的音高曲线对比小图 */
+export interface ToneChart {
+  x: number;
+  y: number;
+  /** 玩家读音（相对音域 0–1） */
+  heard: number[];
+  expected: Tone;
+  life: number;
+  maxLife: number;
+}
+
 /** 扩散的圆环（炸弹冲击波） */
 export interface Ring {
   x: number;
@@ -80,6 +93,7 @@ export class Effects {
   texts: FloatText[] = [];
   slashes: Slash[] = [];
   rings: Ring[] = [];
+  charts: ToneChart[] = [];
   /** 屏幕震动剩余秒数 */
   screenShake = 0;
   /** 全屏白光（炸弹），0–1 */
@@ -139,6 +153,11 @@ export class Effects {
     }
   }
 
+  toneChart(x: number, y: number, heard: number[], expected: Tone): void {
+    // 同一时间只留一张，免得叠在一起看不清
+    this.charts = [{ x, y, heard, expected, life: 2.2, maxLife: 2.2 }];
+  }
+
   text(x: number, y: number, text: string, color: string, size: number, life = 1.2, pop = false): void {
     this.texts.push({ x, y, text, color, size, life, maxLife: life, pop });
   }
@@ -172,6 +191,8 @@ export class Effects {
 
     for (const s of this.slashes) s.life -= dt;
     this.slashes = this.slashes.filter((s) => s.life > 0);
+    for (const c of this.charts) c.life -= dt;
+    this.charts = this.charts.filter((c) => c.life > 0);
     for (const r of this.rings) r.life -= dt;
     this.rings = this.rings.filter((r) => r.life > 0);
 
@@ -186,6 +207,7 @@ export class Effects {
     this.texts = [];
     this.slashes = [];
     this.rings = [];
+    this.charts = [];
     this.screenShake = 0;
     this.flash = 0;
   }

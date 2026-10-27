@@ -34,7 +34,10 @@ export interface MatchTarget {
 
 export interface ToneResult {
   tone: Tone;
+  /** 0–1；低于设置里的阈值时不判错 */
   confidence: number;
+  /** 玩家读音的音高曲线（相对音域 0–1，等间隔采样），读错时画对比小图用 */
+  contour?: number[];
 }
 
 export interface ToneMiss {
@@ -43,6 +46,8 @@ export interface ToneMiss {
   base: string;
   expected: Tone;
   heard: Tone;
+  /** 音高分析时玩家读音的曲线 */
+  heardContour?: number[];
 }
 
 export interface MatchResult {
@@ -227,7 +232,9 @@ class Matcher {
           }
           const accepted = tones[k];
           if (v.kind === 'toneMiss' && !firstMiss && accepted) {
+            const contour = this.pitchTones?.[from + k]?.contour;
             firstMiss = { base: syllables[k].base, expected: accepted[accepted.length - 1], heard: v.heard };
+            if (contour) firstMiss.heardContour = contour;
           }
         }
         if (!ok) continue;

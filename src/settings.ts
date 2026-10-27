@@ -19,6 +19,8 @@ export interface Settings {
   showTones: boolean;
   toneMode: ToneMode;
   sandhi: boolean;
+  /** 读错声调时画出音高曲线对比（练习模式下总是显示） */
+  showPitchCurve: boolean;
   toneConfidenceThreshold: number;
   strictHanzi: boolean;
   fuzzy: FuzzyRule[];
@@ -43,6 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showTones: true,
   toneMode: 'off',
   sandhi: true,
+  showPitchCurve: true,
   toneConfidenceThreshold: 0.6,
   strictHanzi: false,
   fuzzy: [],
@@ -90,6 +93,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     showTones: bool(r.showTones, d.showTones),
     toneMode: oneOf(r.toneMode, AVAILABLE_TONE_MODES, d.toneMode),
     sandhi: bool(r.sandhi, d.sandhi),
+    showPitchCurve: bool(r.showPitchCurve, d.showPitchCurve),
     toneConfidenceThreshold: num(r.toneConfidenceThreshold, 0.3, 0.95, d.toneConfidenceThreshold),
     strictHanzi: bool(r.strictHanzi, d.strictHanzi),
     fuzzy,

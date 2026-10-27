@@ -78,3 +78,44 @@ describe('声调分类（标准录音）', () => {
     expect(wrong.length / Math.max(1, confident.length)).toBeLessThanOrEqual(0.05);
   });
 });
+
+/**
+ * 词语：文件名里是实际读音的声调（变调后），例如 nihao_23（你好读 ní hǎo）、mama_10（第二个字轻声，不判）。
+ * 连读时音节之间可能没有明显的能量谷（"妈妈"的 m、"老师"的 sh），切不准时游戏退回字形推断，不会冤枉玩家。
+ */
+describe('词语（连读两个字）', () => {
+  const WORDS = join(__dirname, 'fixtures', 'words');
+  let words = 0;
+  let segmentedOk = 0;
+  let tones = 0;
+  let tonesOk = 0;
+
+  for (const voice of readdirSync(WORDS)) {
+    it(`${voice}：切音节、判声调`, () => {
+      const range = calibrate(voice);
+      for (const file of readdirSync(join(WORDS, voice))) {
+        const m = /_([0-4]+)\.wav$/.exec(file);
+        if (!m) continue;
+        const expected = [...m[1]].map(Number);
+        const segs = segmentsOf(join(WORDS, voice, file));
+        words++;
+        if (segs.length !== expected.length) continue;
+        segmentedOk++;
+        segs.forEach((s, i) => {
+          if (expected[i] === 0) return; // 轻声不判
+          tones++;
+          if (classifyTone(s, range)?.tone === expected[i]) tonesOk++;
+        });
+      }
+    });
+  }
+
+  it('大多数词语能切成正确的音节数（≥ 85%）', () => {
+    console.log(`词语切对 ${segmentedOk}/${words}，切对的词语中声调对 ${tonesOk}/${tones}`);
+    expect(segmentedOk / words).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it('切对的词语里，声调判断不低于 75%（连读音节短，比单字难）', () => {
+    expect(tonesOk / tones).toBeGreaterThanOrEqual(0.75);
+  });
+});

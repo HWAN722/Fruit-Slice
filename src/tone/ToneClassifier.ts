@@ -1,13 +1,10 @@
+import type { ToneResult } from '../match/matcher';
 import type { Tone } from '../match/normalize';
 import { REF_HZ, type VoiceRange } from './Calibration';
 import type { PitchFrame, SyllableSegment } from './SyllableSegmenter';
 import { toSemitones } from './yin';
 
-export interface ToneResult {
-  tone: Tone;
-  /** 0–1；低于设置里的阈值时不判错 */
-  confidence: number;
-}
+export type { ToneResult } from '../match/matcher';
 
 /** 声调曲线的特征（半音；level 类为相对玩家音域的位置，0 = 最低，1 = 最高） */
 export interface ContourFeatures {
@@ -72,6 +69,26 @@ export function contour(frames: PitchFrame[]): { pos: number; st: number }[] {
       return Math.abs(p.st - median(window)) <= OUTLIER_ST;
     })
     .map(({ pos, st }) => ({ pos, st }));
+}
+
+const CONTOUR_POINTS = 16;
+
+/** 曲线等间隔重采样成 CONTOUR_POINTS 个点（相对音域 0–1），画图用 */
+export function contourLevels(segment: SyllableSegment, range: VoiceRange): number[] {
+  const pts = contour(segment.frames);
+  if (pts.length < 2) return [];
+  const span = Math.max(1, range.high - range.low);
+  const out: number[] = [];
+  for (let i = 0; i < CONTOUR_POINTS; i++) {
+    const pos = pts[0].pos + ((pts[pts.length - 1].pos - pts[0].pos) * i) / (CONTOUR_POINTS - 1);
+    let k = 0;
+    while (k < pts.length - 2 && pts[k + 1].pos < pos) k++;
+    const a = pts[k];
+    const b = pts[k + 1];
+    const t = b.pos === a.pos ? 0 : (pos - a.pos) / (b.pos - a.pos);
+    out.push((a.st + (b.st - a.st) * Math.min(1, Math.max(0, t)) - range.low) / span);
+  }
+  return out;
 }
 
 export function features(segment: SyllableSegment, range: VoiceRange): ContourFeatures | null {
@@ -165,7 +182,9 @@ export function classifyTone(segment: SyllableSegment, range: VoiceRange): ToneR
   const ranked = (Object.entries(scores) as [string, number][]).sort((a, b) => b[1] - a[1]);
   const [bestTone, best] = ranked[0];
   const second = ranked[1][1];
-  if (best < 0.15) return { tone: Number(bestTone) as Tone, confidence: 0 };
+  const tone = Number(bestTone) as Tone;
+  const levels = contourLevels(segment, range);
+  if (best < 0.15) return { tone, confidence: 0, contour: levels };
   const confidence = Math.min(1, best * (0.5 + (best - second) / best / 2));
-  return { tone: Number(bestTone) as Tone, confidence };
+  return { tone, confidence, contour: levels };
 }
