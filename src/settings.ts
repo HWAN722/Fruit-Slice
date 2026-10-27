@@ -54,8 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fastEndpoint: true,
 };
 
-/** 当前版本可以选的声调档位（音高分析在 M7 实现） */
-export const AVAILABLE_TONE_MODES: readonly ToneMode[] = ['off', 'glyph'];
+export const AVAILABLE_TONE_MODES: readonly ToneMode[] = ['off', 'glyph', 'pitch'];
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
   return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;

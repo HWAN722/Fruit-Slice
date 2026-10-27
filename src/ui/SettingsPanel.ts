@@ -1,7 +1,7 @@
 import { FUZZY_RULES } from '../match/fuzzy';
 import type { ToneMode } from '../match/matcher';
 import type { RecognitionMode } from '../speech/SpeechInput';
-import { AVAILABLE_TONE_MODES, effectiveShowTones, type Settings, type SpeechEngineKind } from '../settings';
+import { effectiveShowTones, type Settings, type SpeechEngineKind } from '../settings';
 import { checkbox, h, segmented, slider } from './dom';
 import { S } from './strings';
 
@@ -14,6 +14,10 @@ export class SettingsPanel {
   onClose: (() => void) | null = null;
   /** 调音量时试听一下 */
   onPreviewSound: (() => void) | null = null;
+  /** 打开校准；第一次选"音高分析"时也会自动打开 */
+  onCalibrate: (() => void) | null = null;
+  /** 当前是否已校准音域 */
+  isCalibrated: () => boolean = () => false;
 
   private readonly root: HTMLElement;
   private readonly card: HTMLElement;
@@ -92,7 +96,8 @@ export class SettingsPanel {
     );
 
     const pitchOn = s.toneMode === 'pitch';
-    const recalibrate = h('button', { class: 'secondary small', type: 'button', disabled: true }, `${T.recalibrate}（${T.comingSoon}）`);
+    const recalibrate = h('button', { class: 'secondary small', type: 'button' }, T.recalibrate);
+    recalibrate.addEventListener('click', () => this.onCalibrate?.());
 
     this.card.replaceChildren(
       h('h1', null, T.title),
@@ -102,11 +107,13 @@ export class SettingsPanel {
       segmented(
         TONE_MODES.map((m) => ({
           value: m,
-          label: AVAILABLE_TONE_MODES.includes(m) ? T.toneModes[m] : `${T.toneModes[m]}（${T.comingSoon}）`,
-          disabled: !AVAILABLE_TONE_MODES.includes(m),
+          label: T.toneModes[m],
         })),
         s.toneMode,
-        (m) => this.set('toneMode', m),
+        (m) => {
+          this.set('toneMode', m);
+          if (m === 'pitch' && !this.isCalibrated()) this.onCalibrate?.();
+        },
       ),
       h('p', { class: 'note' }, T.toneModeHints[s.toneMode]),
       checkbox(
@@ -126,6 +133,7 @@ export class SettingsPanel {
         }, !pitchOn),
       ),
       h('p', { class: 'note' }, T.confidenceHint),
+      h('p', { class: 'note' }, T.calibrated(this.isCalibrated())),
       recalibrate,
 
       h('h2', null, T.matching),

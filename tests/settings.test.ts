@@ -25,8 +25,8 @@ describe('sanitizeSettings', () => {
     expect(s.speechMode).toBe('continuous');
   });
 
-  it('音高分析还没实现，存过也回到关闭', () => {
-    expect(sanitizeSettings({ toneMode: 'pitch' }).toneMode).toBe('off');
+  it('三档声调模式都可以保存', () => {
+    expect(sanitizeSettings({ toneMode: 'pitch' }).toneMode).toBe('pitch');
     expect(sanitizeSettings({ toneMode: 'glyph' }).toneMode).toBe('glyph');
   });
 

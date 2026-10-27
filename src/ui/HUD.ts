@@ -105,7 +105,8 @@ export class HUD {
     return lines;
   }
 
-  draw(game: Game, best: number, mic: MicStatus): void {
+  /** hint：顶部状态下面的一行小提示（例如"建议校准"） */
+  draw(game: Game, best: number, mic: MicStatus, hint: string | null = null): void {
     const { ctx } = this;
     const w = game.width;
     const h = game.height;
@@ -130,6 +131,10 @@ export class HUD {
     }
 
     this.drawMic(mic, w);
+    if (hint) {
+      const narrow = w < 640;
+      this.outlined(hint, w / 2, narrow ? 112 : 46, 14, '#ffe082', 'center');
+    }
     this.drawHeard(game, w, h);
     ctx.restore();
   }

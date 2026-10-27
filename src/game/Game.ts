@@ -1,5 +1,5 @@
 import type { PoolEntry } from '../data/loadBank';
-import { matchTranscript, type MatchOptions, type MatchTarget } from '../match/matcher';
+import { matchTranscript, tokenize, type MatchOptions, type MatchTarget, type ToneResult } from '../match/matcher';
 import { formatSyllable, type Tone } from '../match/normalize';
 import { S } from '../ui/strings';
 import { Bomb } from './Bomb';
@@ -54,6 +54,12 @@ export interface GameStats {
   missed: MissedItem[];
 }
 
+/** 音高分析的结果来源：识别文本共 total 个字，返回最后 fresh 个字的声调；还对不上时返回 null */
+export interface ToneSource {
+  tonesFor(total: number, fresh: number): ToneResult[] | null;
+  endUtterance(): void;
+}
+
 export interface HeardLine {
   text: string;
   /** 切中水果的字的区间，HUD 高亮 */
@@ -99,6 +105,10 @@ export class Game {
   private nextId = 0;
   /** 当前这段识别结果中已经用掉的长度（中间结果会不断变长，已切过的字不重复计算） */
   private consumed = 0;
+  /** 音高分析模式下，声调还没分析完的中间结果，等音节说完再匹配 */
+  private pending: string | null = null;
+  /** 音高分析（"音高分析"档位时由主程序设置） */
+  toneSource: ToneSource | null = null;
   private events: GameEvent[] = [];
 
   constructor(public config: GameConfig) {
@@ -133,6 +143,7 @@ export class Game {
     this.toneConfusions.clear();
     this.heard = { text: '', hits: [], isFinal: true };
     this.consumed = 0;
+    this.pending = null;
     this.spawner = new Spawner(this.config.difficulty);
     this.hurt = 0;
     this.events = [{ type: 'start' }];
@@ -154,6 +165,11 @@ export class Game {
     };
   }
 
+  /** 新的音节分析完了：重新尝试之前在等声调的识别结果 */
+  retryPending(): void {
+    if (this.pending !== null) this.handleTranscript(this.pending, false);
+  }
+
   /** 取走本帧之前发生的事件 */
   drainEvents(): GameEvent[] {
     return this.events.splice(0);
@@ -165,6 +181,7 @@ export class Game {
     this.effects.clear();
     this.heard = { text: '', hits: [], isFinal: true };
     this.events = [];
+    this.pending = null;
     this.state = 'menu';
   }
 
@@ -302,18 +319,36 @@ export class Game {
    * 处理一条识别结果（语音的中间/最终结果，或键盘输入）。
    * 同一段识别结果的中间结果会不断变长，只对还没用掉的部分做匹配。
    */
-  handleTranscript(text: string, isFinal: boolean): void {
+  handleTranscript(text: string, isFinal: boolean, fromSpeech = true): void {
     if (this.state !== 'playing') return;
     if (text.length < this.consumed) this.consumed = 0; // 识别引擎改写了前文
 
     const offset = this.consumed;
     const fresh = text.slice(offset);
+    const previousHits = offset > 0 ? this.heard.hits.filter(([, e]) => e <= offset) : [];
+
+    // 音高分析：找出这几个字各自的声调。音节还没说完时先等一等（中间结果），
+    // 最终结果还对不上就放弃声调判断，退回字形推断。键盘输入自带声调，不用分析。
+    let tones: ToneResult[] | undefined;
+    const usePitch = fromSpeech && this.config.match.toneMode === 'pitch' && this.toneSource !== null;
+    if (usePitch && this.toneSource) {
+      const found = this.toneSource.tonesFor(tokenize(text).length, tokenize(fresh).length);
+      if (found) {
+        tones = found;
+      } else if (!isFinal) {
+        this.pending = text;
+        this.heard = { text, hits: previousHits, isFinal };
+        return;
+      }
+    }
+    this.pending = null;
+
     const targets: MatchTarget[] = this.fruits
       .filter((f) => f.state === 'flying')
       .map((f) => ({ id: f.id, text: f.text, pinyin: f.pinyin, isBomb: f.isBomb }));
-    const result = matchTranscript(fresh, targets, this.config.match);
+    const result = matchTranscript(fresh, targets, this.config.match, tones);
+    if (isFinal && usePitch) this.toneSource?.endUtterance();
 
-    const previousHits = offset > 0 ? this.heard.hits.filter(([, e]) => e <= offset) : [];
     this.heard = {
       text,
       hits: [...previousHits, ...result.hitSpans.map(([s, e]): [number, number] => [s + offset, e + offset])],

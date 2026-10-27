@@ -7,6 +7,9 @@ import { SpeechInput } from './speech/SpeechInput';
 import type { SpeechEngine } from './speech/TranscriptSource';
 import { VoiceActivity } from './speech/VoiceActivity';
 import { VoskInput } from './speech/VoskInput';
+import { loadRange, saveRange } from './tone/Calibration';
+import { PitchTracker } from './tone/PitchTracker';
+import { CalibrationScene } from './ui/CalibrationScene';
 import { loadBest, loadSettings, saveBest, saveSettings } from './storage';
 import { HUD } from './ui/HUD';
 import { MenuScene } from './ui/MenuScene';
@@ -64,9 +67,32 @@ const keyboard = new KeyboardInput(form, input);
 for (const source of [browserSpeech, offlineSpeech]) {
   source.onDebug = (e) => debugPanel.log(e);
 }
-for (const source of [browserSpeech, offlineSpeech, keyboard]) {
+for (const source of [browserSpeech, offlineSpeech]) {
   source.onTranscript = (text, isFinal) => game.handleTranscript(text, isFinal);
 }
+// 键盘输入自带声调（ma1 / mā），不走音高分析
+keyboard.onTranscript = (text, isFinal) => game.handleTranscript(text, isFinal, false);
+
+// 音高分析（"音高分析"档位）：直接听声调，不依赖识别出来的字
+const pitch = new PitchTracker();
+pitch.range = loadRange();
+game.toneSource = pitch.tones;
+const calibration = new CalibrationScene();
+calibration.startListening = () => pitch.start();
+calibration.stopListening = () => pitch.stop();
+calibration.onCalibrated = (range) => {
+  pitch.range = range;
+  saveRange(range);
+};
+pitch.onSegment = (segment, result) => {
+  if (calibration.listening) {
+    calibration.handleSegment(segment);
+    return;
+  }
+  debugPanel.log(result ? `tone ${result.tone} (${result.confidence.toFixed(2)})` : 'tone ?');
+  // 新的音节分析完了：之前在等声调的识别结果可以判断了
+  game.retryPending();
+};
 keyboard.start();
 // 开发时在控制台用 __game / __speech 查看、调试状态
 if (import.meta.env.DEV) Object.assign(window, { __game: game, __speech: () => speech, __vad: vad });
@@ -78,9 +104,12 @@ function syncMic(): void {
     // 音量检测用于浏览器识别的快速断句，以及诊断面板里的延迟统计
     const needVad = speech === browserSpeech || debugPanel.visible;
     if (needVad && speech.supported && speech.status !== 'denied') void vad.start();
+    if (settings.toneMode === 'pitch') void pitch.start();
+    else pitch.stop();
   } else {
     if (speech.status !== 'idle') speech.stop();
     vad.stop();
+    if (!calibration.visible) pitch.stop();
   }
 }
 
@@ -104,6 +133,9 @@ const settingsPanel = new SettingsPanel(settings, settingsChanged);
 menu.onStart = startGame;
 menu.onOpenSettings = () => settingsPanel.open();
 settingsPanel.onClose = () => menu.refresh();
+settingsPanel.isCalibrated = () => pitch.range.calibrated;
+settingsPanel.onCalibrate = () => calibration.open();
+calibration.onClose = () => settingsPanel.refresh();
 settingsPanel.onPreviewSound = () => {
   sound.unlock();
   sound.play({ type: 'slice', count: 1 });
@@ -196,6 +228,10 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (calibration.visible) {
+    if (e.key === 'Escape') calibration.close();
+    return;
+  }
   if (settingsPanel.visible) {
     if (e.key === 'Escape') settingsPanel.close();
     return;
@@ -264,7 +300,8 @@ function frame(now: number): void {
   }
 
   renderer.draw(game, dt);
-  hud.draw(game, best, speech.status);
+  const hint = settings.toneMode === 'pitch' && !pitch.range.calibrated ? S.calibrateHint : null;
+  hud.draw(game, best, speech.status, hint);
   debugPanel.render();
   requestAnimationFrame(frame);
 }
