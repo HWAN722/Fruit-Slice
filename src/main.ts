@@ -4,8 +4,10 @@ import { Renderer } from './game/Renderer';
 import { DEFAULT_MATCH_OPTIONS } from './match/matcher';
 import { KeyboardInput } from './speech/KeyboardInput';
 import { SpeechInput } from './speech/SpeechInput';
-import { loadBest, saveBest } from './storage';
+import { VoiceActivity } from './speech/VoiceActivity';
+import { loadBest, loadSpeechTuning, saveBest, saveSpeechTuning } from './storage';
 import { HUD } from './ui/HUD';
+import { SpeechDebugPanel } from './ui/SpeechDebugPanel';
 import { S } from './ui/strings';
 
 function must<T extends HTMLElement>(id: string, ctor: new () => T): T {
@@ -34,19 +36,34 @@ const hud = new HUD(ctx);
 let best = loadBest();
 
 // 语音为主；键盘输入始终可用（调试 + 不支持语音/拒绝权限时兜底）
-const speech = new SpeechInput();
+const tuning = loadSpeechTuning();
+const speech = new SpeechInput(undefined, tuning.mode);
+// 自己检测说完了没有：识别引擎自带的断句要等较长的静音，检测到说完就让它立刻出结果
+const vad = new VoiceActivity();
+const debugPanel = new SpeechDebugPanel(vad, () => tuning);
+if (new URLSearchParams(location.search).has('debug')) debugPanel.toggle();
+speech.onDebug = (e) => debugPanel.log(e);
+vad.onEvent = (e) => {
+  debugPanel.onVad(e);
+  if (e.type === 'end' && tuning.fastEndpoint) speech.flush();
+};
 const keyboard = new KeyboardInput(form, input);
 for (const source of [speech, keyboard]) {
   source.onTranscript = (text, isFinal) => game.handleTranscript(text, isFinal);
 }
 keyboard.start();
 // 开发时在控制台用 __game / __speech 查看、调试状态
-if (import.meta.env.DEV) Object.assign(window, { __game: game, __speech: speech });
+if (import.meta.env.DEV) Object.assign(window, { __game: game, __speech: speech, __vad: vad });
 
 /** 只在游戏进行中监听；暂停、结束时停止识别（onend 里也不会再自动重启） */
 function syncMic(): void {
-  if (game.state === 'playing') speech.start();
-  else if (speech.status !== 'idle') speech.stop();
+  if (game.state === 'playing') {
+    speech.start();
+    if (speech.supported && speech.status !== 'denied') void vad.start();
+  } else {
+    if (speech.status !== 'idle') speech.stop();
+    vad.stop();
+  }
 }
 
 function resize(): void {
@@ -63,7 +80,22 @@ window.addEventListener('resize', resize);
 resize();
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+  if (e.key === 'F2') {
+    e.preventDefault();
+    debugPanel.toggle();
+    return;
+  } else if (e.key === 'F3') {
+    e.preventDefault();
+    tuning.mode = tuning.mode === 'continuous' ? 'single' : 'continuous';
+    speech.setMode(tuning.mode);
+    saveSpeechTuning(tuning);
+    return;
+  } else if (e.key === 'F4') {
+    e.preventDefault();
+    tuning.fastEndpoint = !tuning.fastEndpoint;
+    saveSpeechTuning(tuning);
+    return;
+  } else if (e.key === 'Escape') {
     game.togglePause();
     syncMic();
   } else if (e.key === 'Enter' && (game.state === 'ready' || game.state === 'over')) {
@@ -101,6 +133,7 @@ function frame(now: number): void {
 
   renderer.draw(game, dt);
   hud.draw(game, best, speech.status);
+  debugPanel.render();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

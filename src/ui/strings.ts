@@ -27,4 +27,19 @@ export const S = {
   },
   heardLabel: '识别：',
   practice: '练习模式',
+  debug: {
+    title: '语音诊断（F2 关闭）',
+    mode: (single: boolean) => `F3 识别模式：${single ? '单句模式' : '持续识别'}`,
+    fast: (on: boolean) => `F4 快速断句：${on ? '开' : '关'}`,
+    level: (db: number, threshold: number, speaking: boolean) =>
+      `音量 ${db.toFixed(0)} dB（阈值 ${threshold.toFixed(0)}）${speaking ? '  说话中' : ''}`,
+    noVad: '音量检测不可用（麦克风被占用或无权限）',
+    firstText: '说完 → 出字',
+    finalText: '说完 → 最终结果',
+    stat: (last: number, avg: number, n: number) => `最近 ${last} ms，平均 ${avg} ms（${n} 次）`,
+    noData: '还没有数据，读几个字试试',
+    events: '最近事件：',
+    vadStart: 'vad 开始说话',
+    vadEnd: (ms: number) => `vad 说完（说了 ${ms} ms）`,
+  },
 } as const;

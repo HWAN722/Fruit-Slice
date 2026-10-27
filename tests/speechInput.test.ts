@@ -18,6 +18,7 @@ class FakeRecognition implements Recognition {
   onerror: ((e: RecognitionErrorEvent) => void) | null = null;
   onend: (() => void) | null = null;
   starts = 0;
+  stops = 0;
   aborts = 0;
   running = false;
   throwOnStart = false;
@@ -31,6 +32,11 @@ class FakeRecognition implements Recognition {
     this.starts += 1;
     this.running = true;
     this.onstart?.();
+  }
+
+  stop(): void {
+    this.stops += 1;
+    this.end();
   }
 
   abort(): void {
@@ -183,6 +189,51 @@ describe('SpeechInput', () => {
     rec().throwOnStart = false;
     vi.runAllTimers();
     expect(rec().starts).toBe(2);
+  });
+
+  it('flush 让引擎立刻结束并出结果，然后马上重启', () => {
+    const { input, rec } = setup();
+    input.start();
+    input.flush();
+    expect(rec().stops).toBe(1);
+    vi.advanceTimersByTime(0);
+    expect(rec().starts).toBe(2);
+  });
+
+  it('没在识别时 flush 不做事', () => {
+    const { input, rec } = setup();
+    input.start();
+    input.stop();
+    input.flush();
+    expect(rec().stops).toBe(0);
+  });
+
+  it('默认持续识别；单句模式下 continuous 为 false', () => {
+    const single = new SpeechInput(FakeRecognition, 'single');
+    single.start();
+    expect(FakeRecognition.instances[0].continuous).toBe(false);
+  });
+
+  it('切换模式：停掉旧实例，用新模式重新创建', () => {
+    const { input, rec } = setup();
+    input.start();
+    input.setMode('single');
+    expect(rec().aborts).toBe(1);
+    vi.runAllTimers();
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(FakeRecognition.instances[1].continuous).toBe(false);
+    expect(FakeRecognition.instances[1].starts).toBe(1);
+    expect(input.recognitionMode).toBe('single');
+  });
+
+  it('暂停时切换模式，恢复后按新模式启动', () => {
+    const { input } = setup();
+    input.start();
+    input.stop();
+    input.setMode('single');
+    input.start();
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(FakeRecognition.instances[1].continuous).toBe(false);
   });
 
   it('暂停后迟到的 onend 不会触发重启', () => {

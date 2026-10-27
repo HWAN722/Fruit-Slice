@@ -25,10 +25,14 @@ export interface Recognition {
   continuous: boolean;
   interimResults: boolean;
   onstart: (() => void) | null;
+  onspeechstart?: (() => void) | null;
+  onspeechend?: (() => void) | null;
   onresult: ((e: RecognitionResultEvent) => void) | null;
   onerror: ((e: RecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
   start(): void;
+  /** 停止收音，但会把已经听到的部分作为最终结果返回 */
+  stop(): void;
   abort(): void;
 }
 
@@ -47,6 +51,12 @@ export function getRecognitionCtor(): RecognitionCtor | null {
  */
 export type MicStatus = 'idle' | 'starting' | 'listening' | 'paused' | 'denied' | 'no-device' | 'network' | 'unsupported';
 
+/**
+ * - continuous：一直开着，引擎自己断句（Chrome 默认行为）
+ * - single：每句话一个会话，说完就结束、立刻重开；有的浏览器这样出结果更快
+ */
+export type RecognitionMode = 'continuous' | 'single';
+
 const MAX_RESTART_DELAY = 5000;
 
 /**
@@ -56,6 +66,8 @@ const MAX_RESTART_DELAY = 5000;
 export class SpeechInput implements TranscriptSource {
   onTranscript: ((text: string, isFinal: boolean) => void) | null = null;
   onStatus: ((status: MicStatus) => void) | null = null;
+  /** 诊断用：识别引擎的各个事件 */
+  onDebug: ((event: string) => void) | null = null;
   status: MicStatus;
 
   private rec: Recognition | null = null;
@@ -69,6 +81,7 @@ export class SpeechInput implements TranscriptSource {
 
   constructor(
     private readonly Ctor: RecognitionCtor | null = getRecognitionCtor(),
+    private mode: RecognitionMode = 'continuous',
     private readonly lang = 'zh-CN',
   ) {
     this.status = Ctor ? 'idle' : 'unsupported';
@@ -92,6 +105,32 @@ export class SpeechInput implements TranscriptSource {
     if (this.status !== 'denied' && this.status !== 'unsupported') this.setStatus('paused');
   }
 
+  get recognitionMode(): RecognitionMode {
+    return this.mode;
+  }
+
+  /** 切换识别模式：丢掉当前实例，下次启动时按新模式创建 */
+  setMode(mode: RecognitionMode): void {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    const old = this.rec;
+    this.rec = null;
+    if (old && this.running) {
+      // 旧实例的 onend 会把 running 置回 false 并按新模式重启
+      old.abort();
+    }
+  }
+
+  /**
+   * 让引擎立刻把已经听到的内容作为最终结果返回（不等它自己判断说完）。
+   * 结束后 onend 会自动重启。
+   */
+  flush(): void {
+    if (!this.running || !this.rec) return;
+    this.onDebug?.('flush');
+    this.rec.stop();
+  }
+
   private launch(): void {
     if (!this.wanted || this.running || !this.Ctor) return;
     const rec = this.rec ?? this.create(this.Ctor);
@@ -108,12 +147,16 @@ export class SpeechInput implements TranscriptSource {
   private create(Ctor: RecognitionCtor): Recognition {
     const rec = new Ctor();
     rec.lang = this.lang;
-    rec.continuous = true;
+    rec.continuous = this.mode === 'continuous';
     rec.interimResults = true;
+    const debug = (e: string) => this.onDebug?.(e);
 
     rec.onstart = () => {
+      debug('start');
       if (this.wanted) this.setStatus('listening');
     };
+    rec.onspeechstart = () => debug('speechstart');
+    rec.onspeechend = () => debug('speechend');
 
     rec.onresult = (e) => {
       this.failures = 0;
@@ -121,11 +164,14 @@ export class SpeechInput implements TranscriptSource {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const result = e.results[i];
         const text = result[0]?.transcript.trim();
-        if (text) this.onTranscript?.(text, result.isFinal);
+        if (!text) continue;
+        debug(`${result.isFinal ? 'final' : 'interim'} ${text}`);
+        this.onTranscript?.(text, result.isFinal);
       }
     };
 
     rec.onerror = (e) => {
+      debug(`error ${e.error}`);
       switch (e.error) {
         case 'not-allowed':
         case 'service-not-allowed':
@@ -147,6 +193,9 @@ export class SpeechInput implements TranscriptSource {
     };
 
     rec.onend = () => {
+      debug('end');
+      // 切换模式时旧实例的 onend：rec 已被替换
+      if (this.rec !== rec && this.rec !== null) return;
       this.running = false;
       // Chrome 静音一段时间后会自动结束，游戏进行中就重启
       if (this.wanted) this.scheduleRestart();

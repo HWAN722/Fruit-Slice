@@ -37,3 +37,18 @@ body {
 #kbd-input:focus {
   border-color: #ffd54a;
 }
+
+#speech-debug {
+  position: fixed;
+  left: 16px;
+  top: 90px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 10px 12px;
+  font: 13px/1.5 ui-monospace, Consolas, 'Microsoft YaHei', monospace;
+  color: #e0f2f1;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 8px;
+  pointer-events: none;
+  white-space: pre-wrap;
+}
