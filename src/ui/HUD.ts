@@ -1,18 +1,110 @@
 import type { Game } from '../game/Game';
 import { FONT_FAMILY } from '../game/Renderer';
+import type { MicStatus } from '../speech/SpeechInput';
 import { S } from './strings';
 
 /** 输入框占用的底部高度（见 style.css） */
 const INPUT_AREA = 76;
 
 /** 分数、生命、最近识别结果，以及开始/暂停/结束的覆盖层 */
+const MIC_COLORS: Record<MicStatus, string> = {
+  idle: 'rgba(255,255,255,0.5)',
+  starting: '#ffe082',
+  listening: '#81c784',
+  paused: 'rgba(255,255,255,0.5)',
+  denied: '#ef5350',
+  'no-device': '#ef5350',
+  network: '#ffb74d',
+  unsupported: '#ef5350',
+};
+
 export class HUD {
+  private time = 0;
+
   constructor(private readonly ctx: CanvasRenderingContext2D) {}
 
-  draw(game: Game, best: number, inputLabel: string): void {
+  /** 顶部居中：麦克风图标 + 状态，出错时下面再加一行说明 */
+  private drawMic(status: MicStatus, w: number): void {
+    const { label, detail } = S.mic[status];
+    if (!label) return;
+    const { ctx } = this;
+    const color = MIC_COLORS[status];
+    const size = 20;
+    ctx.font = `bold ${size}px ${FONT_FAMILY}`;
+    const textW = ctx.measureText(label).width;
+    const iconW = 22;
+    const x0 = (w - iconW - 8 - textW) / 2;
+    const y = 18;
+
+    // 监听中时图标后面有一圈呼吸光
+    if (status === 'listening') {
+      const pulse = 0.5 + 0.5 * Math.sin(this.time * 4);
+      ctx.fillStyle = `rgba(129,199,132,${0.15 + pulse * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(x0 + iconW / 2, y + 11, 16 + pulse * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    this.micIcon(x0 + iconW / 2, y, color, status === 'denied' || status === 'no-device' || status === 'unsupported');
+    this.outlined(label, x0 + iconW + 8, y, size, color, 'left');
+
+    if (detail) {
+      let ly = y + size + 10;
+      for (const line of this.wrap(detail, 16, Math.min(w - 32, 560))) {
+        this.outlined(line, w / 2, ly, 16, 'rgba(255,255,255,0.85)', 'center');
+        ly += 22;
+      }
+    }
+  }
+
+  /** 麦克风图标：胶囊 + 支架；crossed 时画一道斜杠 */
+  private micIcon(cx: number, top: number, color: string, crossed: boolean): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.roundRect(cx - 5, top, 10, 15, 5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, top + 9, 8.5, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.moveTo(cx, top + 17.5);
+    ctx.lineTo(cx, top + 22);
+    ctx.moveTo(cx - 5, top + 22);
+    ctx.lineTo(cx + 5, top + 22);
+    ctx.stroke();
+    if (crossed) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, top + 22);
+      ctx.lineTo(cx + 10, top - 1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** 按宽度折行（中文按字折） */
+  private wrap(text: string, size: number, maxWidth: number): string[] {
+    const { ctx } = this;
+    ctx.font = `bold ${size}px ${FONT_FAMILY}`;
+    const lines: string[] = [];
+    let line = '';
+    for (const ch of text) {
+      if (line && ctx.measureText(line + ch).width > maxWidth) {
+        lines.push(line);
+        line = '';
+      }
+      line += ch;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  draw(game: Game, best: number, mic: MicStatus): void {
     const { ctx } = this;
     const w = game.width;
     const h = game.height;
+    this.time = performance.now() / 1000;
     ctx.save();
     ctx.textBaseline = 'top';
     ctx.lineJoin = 'round';
@@ -23,10 +115,11 @@ export class HUD {
     if (game.isPractice) this.outlined(S.practice, w - 20, 18, 22, '#a5d6a7', 'right');
     else for (let i = 0; i < 3; i++) this.heart(w - 40 - i * 42, 34, 16, i < game.lives);
 
+    this.drawMic(mic, w);
     this.drawHeard(game, w, h);
-    this.outlined(inputLabel, 16, h - 34, 16, 'rgba(255,255,255,0.6)', 'left');
 
-    if (game.state === 'ready') this.overlay(w, h, S.title, [S.startHint]);
+    const canSpeak = mic !== 'unsupported' && mic !== 'denied' && mic !== 'no-device';
+    if (game.state === 'ready') this.overlay(w, h, S.title, [canSpeak ? S.readHint : S.keyboardHint, S.startHint]);
     else if (game.state === 'paused') this.overlay(w, h, S.pausedTitle, [S.pausedHint]);
     else if (game.state === 'over') this.drawResult(game, best, w, h);
     ctx.restore();
@@ -58,15 +151,19 @@ export class HUD {
 
   /** 屏幕底部：最近识别出的文字，切中的字高亮 */
   private drawHeard(game: Game, w: number, h: number): void {
-    const { text, hits } = game.heard;
+    const { text, hits, isFinal } = game.heard;
     if (!text) return;
     const { ctx } = this;
     const size = 24;
     ctx.font = `bold ${size}px ${FONT_FAMILY}`;
     ctx.textAlign = 'left';
     const pieces: { s: string; hit: boolean }[] = [{ s: S.heardLabel, hit: false }];
-    let i = 0;
+    // 连续说话时文本会很长，只显示末尾能放下的部分
+    const maxChars = Math.max(6, Math.floor((w - 32) / size) - 3);
+    let i = Math.max(0, text.length - maxChars);
+    if (i > 0) pieces.push({ s: '…', hit: false });
     for (const [start, end] of hits) {
+      if (end <= i) continue;
       if (start > i) pieces.push({ s: text.slice(i, start), hit: false });
       pieces.push({ s: text.slice(Math.max(start, i), end), hit: true });
       i = Math.max(i, end);
@@ -80,7 +177,8 @@ export class HUD {
     for (const p of pieces) {
       ctx.strokeStyle = 'rgba(0,0,0,0.7)';
       ctx.strokeText(p.s, x, y);
-      ctx.fillStyle = p.hit ? '#ffd54a' : 'rgba(255,255,255,0.85)';
+      // 中间结果（还在说）颜色淡一些
+      ctx.fillStyle = p.hit ? '#ffd54a' : isFinal ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.55)';
       ctx.fillText(p.s, x, y);
       x += ctx.measureText(p.s).width;
     }
