@@ -31,6 +31,8 @@ const BOMB_CHANCE = 0.12;
 const TONE_FEEDBACK_COOLDOWN = 1.5;
 /** 练习模式下物理时间变慢 */
 const PRACTICE_TIME_SCALE = 0.65;
+/** 水果飞行速度倍数：轨迹不变，只是飞得更慢，给玩家更多时间读 */
+const FRUIT_SPEED = 0.5;
 const MAX_STEP = 1 / 60;
 
 export class Game {
@@ -114,7 +116,7 @@ export class Game {
       const g = this.gravity;
       for (const f of this.fruits) {
         if (f.state !== 'flying') continue;
-        step(f, dt, g);
+        step(f, dt * FRUIT_SPEED, g);
         f.shake = Math.max(0, f.shake - realDt);
         f.feedbackCooldown = Math.max(0, f.feedbackCooldown - realDt);
         if (f.vy > 0 && f.y - f.radius > this.height) this.fallOut(f);
