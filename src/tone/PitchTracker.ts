@@ -43,8 +43,8 @@ export class PitchTracker {
     const gen = this.generation;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        // 不要自动增益：会把音量曲线压平，影响按能量切音节
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 },
+        // 要原始声音：降噪和回声消除会削掉三声、四声尾部的弱周期信号，自动增益会把音量曲线压平
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
       });
       const audio = new AudioContext();
       // 不在点击事件里创建时可能是暂停状态

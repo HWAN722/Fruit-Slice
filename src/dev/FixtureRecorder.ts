@@ -79,7 +79,8 @@ export class FixtureRecorder {
     if (this.audio) return true;
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 },
+        // 和 PitchTracker 一样取原始声音，录下来的夹具才和游戏里听到的一致
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
       });
     } catch {
       return false;

@@ -329,18 +329,24 @@ export class Game {
     const fresh = text.slice(offset);
     const previousHits = offset > 0 ? this.heard.hits.filter(([, e]) => e <= offset) : [];
 
-    // 音高分析：找出这几个字各自的声调。音节还没说完时先等一等（中间结果），
-    // 最终结果还对不上就放弃声调判断，退回字形推断。键盘输入自带声调，不用分析。
+    // 音高分析：找出这几个字各自的声调。音节还没说完时先等一等（中间结果）。
+    // 最终结果还对不上时：只读了一个字就放弃声调判断（只看音节）——识别引擎对孤立单字
+    // 常猜成别的同音字，按它的字典调判会冤枉玩家；两个字以上有上下文，才退回字形推断。
+    // 键盘输入自带声调，不用分析。
     let tones: ToneResult[] | undefined;
     const usePitch = fromSpeech && this.config.match.toneMode === 'pitch' && this.toneSource !== null;
     if (usePitch && this.toneSource) {
-      const found = this.toneSource.tonesFor(tokenize(text).length, tokenize(fresh).length);
+      const total = tokenize(text).length;
+      const freshCount = tokenize(fresh).length;
+      const found = this.toneSource.tonesFor(total, freshCount);
       if (found) {
         tones = found;
       } else if (!isFinal) {
         this.pending = text;
         this.heard = { text, hits: previousHits, isFinal };
         return;
+      } else if (total <= 1) {
+        tones = Array.from({ length: freshCount }, () => ({ tone: 0, confidence: 0 }));
       }
     }
     this.pending = null;

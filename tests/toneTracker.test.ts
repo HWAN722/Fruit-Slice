@@ -104,6 +104,26 @@ describe('Game + 音高分析', () => {
     expect(a4.state).toBe('flying');
   });
 
+  it('最终结果只有一个字、音节对不上：按"声调未知"切开，不用识别引擎猜的字判声调', () => {
+    const { game, add } = setup();
+    // 玩家读 mā，引擎认成了"马"（三声）；音高分析没切出音节（对不上）
+    const a1 = add('mā');
+    game.handleTranscript('马', true);
+    expect(a1.state).toBe('sliced');
+    expect(game.toneErrors).toBe(0);
+  });
+
+  it('最终结果有两个字以上、音节对不上：退回字形推断', () => {
+    const { game, add } = setup();
+    const t = add('nǐ hǎo');
+    game.handleTranscript('你好', true);
+    expect(t.state).toBe('sliced');
+    const wrong = add('mā');
+    game.handleTranscript('马马', true);
+    expect(wrong.state).toBe('flying');
+    expect(game.toneErrors).toBe(1);
+  });
+
   it('读对音节、声调错：不切开，提示读成了几声', () => {
     const { game, tracker, add } = setup();
     const a1 = add('ā');
@@ -122,12 +142,12 @@ describe('Game + 音高分析', () => {
     expect(a1.state).toBe('sliced');
   });
 
-  it('最终结果还对不上时退回字形推断', () => {
+  it('单字的最终结果对不上时不看字形：同音节的水果全切', () => {
     const { game, add } = setup();
     const yi1 = add('yī');
     const yi2 = add('yí');
-    game.handleTranscript('姨', true); // 没有任何音节，按"姨"字的声调（二声）
-    expect(yi1.state).toBe('flying');
+    game.handleTranscript('姨', true); // 没有任何音节；"姨"是引擎猜的字，不按它的二声判
+    expect(yi1.state).toBe('sliced');
     expect(yi2.state).toBe('sliced');
   });
 

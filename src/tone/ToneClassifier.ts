@@ -171,9 +171,21 @@ export function toneScores(f: ContourFeatures): Record<1 | 2 | 3 | 4, number> {
   return { 1: t1, 2: t2, 3: t3, 4: t4 };
 }
 
+/** 基频点少于这个数时置信度打折，到 EVIDENCE_FULL_POINTS 才不打折 */
+const EVIDENCE_MIN_POINTS = 3;
+const EVIDENCE_FULL_POINTS = 8;
+/** 有基频的帧占音节帧数的比例低于这个也打折（大半是气泡音或噪声的音节不可靠） */
+const EVIDENCE_MIN_VOICED = 0.1;
+const EVIDENCE_FULL_VOICED = 0.3;
+
+/** 证据够不够：0–1。只凭三两个基频点下的结论不能当真 */
+export function evidence(points: number, frames: number): number {
+  return ramp(points, EVIDENCE_MIN_POINTS, EVIDENCE_FULL_POINTS) * ramp(points / Math.max(1, frames), EVIDENCE_MIN_VOICED, EVIDENCE_FULL_VOICED);
+}
+
 /**
  * 声调分类。返回 null 表示没法判断（太短、基频点太少）。
- * 置信度看最高分和第二名差多少：分差大才可信，避免冤枉玩家。
+ * 置信度看最高分和第二名差多少，再按证据多少打折：分差大、基频点多才可信，避免冤枉玩家。
  */
 export function classifyTone(segment: SyllableSegment, range: VoiceRange): ToneResult | null {
   const f = features(segment, range);
@@ -185,6 +197,6 @@ export function classifyTone(segment: SyllableSegment, range: VoiceRange): ToneR
   const tone = Number(bestTone) as Tone;
   const levels = contourLevels(segment, range);
   if (best < 0.15) return { tone, confidence: 0, contour: levels };
-  const confidence = Math.min(1, best * (0.5 + (best - second) / best / 2));
+  const confidence = Math.min(1, best * (0.5 + (best - second) / best / 2)) * evidence(f.points, segment.frames.length);
   return { tone, confidence, contour: levels };
 }
